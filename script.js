@@ -1,19 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. إعدادات اللغة التلقائية
     const userLang = navigator.language || navigator.userLanguage;
-    if (userLang.startsWith('tr')) {
-        document.getElementById('welcomeText').innerText = "Merhaba, bugün evinizdeki sorun nedir?";
-        document.getElementById('problemText').placeholder = "Sorununuzu buraya yazın...";
-        document.documentElement.dir = "ltr";
-        document.documentElement.lang = "tr";
-    } else if (!userLang.startsWith('ar')) {
-        document.getElementById('welcomeText').innerText = "Welcome, what is the problem in your home today?";
-        document.getElementById('problemText').placeholder = "Type your problem here...";
-        document.documentElement.dir = "ltr";
-        document.documentElement.lang = "en";
+    const welcomeText = document.getElementById('welcomeText');
+    const inputBox = document.getElementById('problemText');
+    
+    if (welcomeText && inputBox) {
+        if (userLang.startsWith('tr')) {
+            welcomeText.innerText = "Merhaba, bugün evinizdeki sorun nedir?";
+            inputBox.placeholder = "Sorununuzu buraya yazın...";
+            document.documentElement.dir = "ltr";
+        } else if (!userLang.startsWith('ar')) {
+            welcomeText.innerText = "Welcome, what is the problem in your home today?";
+            inputBox.placeholder = "Type your problem here...";
+            document.documentElement.dir = "ltr";
+        }
     }
 
-    // 2. تشغيل Firebase
     const checkFirebase = setInterval(() => {
         if (window.firebaseAuth && window.firebaseFunctions) {
             clearInterval(checkFirebase);
@@ -26,68 +27,91 @@ let currentUser = null;
 let currentChatId = null;
 
 function initApp() {
-    const { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut, collection, addDoc, query, where, getDocs, deleteDoc, doc, updateDoc, getDoc, orderBy } = window.firebaseFunctions;
+    const { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut, collection, addDoc, query, where, getDocs, deleteDoc, doc, updateDoc, getDoc } = window.firebaseFunctions;
     const auth = window.firebaseAuth;
     const db = window.firebaseDb;
     const authError = document.getElementById('authError');
 
-    const showError = (msg) => { authError.textContent = msg; authError.style.display = 'block'; };
+    const showError = (msg) => { 
+        if(authError) {
+            authError.textContent = msg; 
+            authError.style.display = 'block'; 
+        }
+    };
 
-    // مراقبة الدخول
     onAuthStateChanged(auth, async (user) => {
+        // حماية العناصر لو مش موجودة
+        const authScreen = document.getElementById('authScreen');
+        const mainContent = document.querySelector('.main-content');
+        const sidebar = document.getElementById('sidebar');
+        const userInfo = document.getElementById('userInfo');
+        const userEmail = document.getElementById('userEmail');
+
         if (user) {
             currentUser = user;
-            document.getElementById('authScreen').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-            document.getElementById('sidebar').style.display = 'flex';
-            document.getElementById('userEmail').textContent = user.email;
+            if (authScreen) authScreen.style.display = 'none';
+            if (mainContent) mainContent.style.display = 'block';
+            if (sidebar) sidebar.style.display = 'flex';
+            if (userInfo) userInfo.classList.remove('hidden');
+            if (userEmail) userEmail.textContent = user.email;
             
             await loadChatHistory(user.uid);
             createNewChat();
         } else {
             currentUser = null;
-            document.getElementById('authScreen').style.display = 'flex';
-            document.getElementById('mainContent').style.display = 'none';
-            document.getElementById('sidebar').style.display = 'none';
+            if (authScreen) authScreen.style.display = 'flex';
+            if (mainContent) mainContent.style.display = 'none';
+            if (sidebar) sidebar.style.display = 'none';
+            if (userInfo) userInfo.classList.add('hidden');
         }
     });
 
     // أزرار الدخول
-    document.getElementById('googleSignInBtn').addEventListener('click', () => {
+    const googleBtn = document.getElementById('googleSignInBtn');
+    if(googleBtn) googleBtn.addEventListener('click', () => {
         signInWithPopup(auth, new GoogleAuthProvider()).catch(err => showError(err.message));
     });
-    document.getElementById('emailSignInBtn').addEventListener('click', () => {
+
+    const emailSignInBtn = document.getElementById('emailSignInBtn');
+    if(emailSignInBtn) emailSignInBtn.addEventListener('click', () => {
         signInWithEmailAndPassword(auth, document.getElementById('authEmail').value, document.getElementById('authPassword').value).catch(err => showError(err.message));
     });
-    document.getElementById('emailSignUpBtn').addEventListener('click', () => {
+
+    const emailSignUpBtn = document.getElementById('emailSignUpBtn');
+    if(emailSignUpBtn) emailSignUpBtn.addEventListener('click', () => {
         createUserWithEmailAndPassword(auth, document.getElementById('authEmail').value, document.getElementById('authPassword').value).catch(err => showError(err.message));
     });
-    document.getElementById('forgotPasswordBtn').addEventListener('click', () => {
+
+    const forgotBtn = document.getElementById('forgotPasswordBtn');
+    if(forgotBtn) forgotBtn.addEventListener('click', () => {
         const email = document.getElementById('authEmail').value;
         if (!email) return showError('اكتب الإيميل الأول.');
         sendPasswordResetEmail(auth, email).then(() => alert('تم إرسال رابط إعادة التعيين.')).catch(err => showError(err.message));
     });
-    document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+
+    const logoutBtn = document.getElementById('logoutBtn');
+    if(logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
     
-    // أزرار المحادثات
-    document.getElementById('newChatBtn').addEventListener('click', createNewChat);
+    const newChatBtn = document.getElementById('newChatBtn');
+    if(newChatBtn) newChatBtn.addEventListener('click', createNewChat);
 
     // إرسال الرسالة
-    document.getElementById('btnDiagnose').addEventListener('click', async () => {
+    const diagnoseBtn = document.getElementById('btnDiagnose');
+    if(diagnoseBtn) diagnoseBtn.addEventListener('click', async () => {
         const input = document.getElementById('problemText');
         const text = input.value.trim();
         if (!text || !currentUser) return;
 
         input.value = '';
-        document.getElementById('welcomeLogo').style.display = 'none';
+        const welcomeLogo = document.getElementById('welcomeLogo');
+        if(welcomeLogo) welcomeLogo.style.display = 'none';
+        
         appendMessageToUI('user', text);
         
-        // حفظ رسالة المستخدم
         await addDoc(collection(db, `user_chats/${currentChatId}/messages`), {
             role: "user", content: text, timestamp: new Date()
         });
 
-        // تسمية تلقائية للمحادثة لو دي أول رسالة
         const chatDoc = await getDoc(doc(db, "user_chats", currentChatId));
         if (chatDoc.data().title === "محادثة جديدة") {
             const newTitle = text.split(" ").slice(0, 4).join(" ") + "...";
@@ -95,12 +119,11 @@ function initApp() {
             await loadChatHistory(currentUser.uid);
         }
 
-        // رد البوت
         appendMessageToUI('assistant', "جاري التفكير...");
         const reply = await askGroqAI(text);
-        document.querySelector('.chat-container').lastElementChild.innerText = reply;
+        const chatContainer = document.getElementById('chatContainer');
+        if(chatContainer) chatContainer.lastElementChild.innerText = reply;
 
-        // حفظ رد البوت
         await addDoc(collection(db, `user_chats/${currentChatId}/messages`), {
             role: "assistant", content: reply, timestamp: new Date()
         });
@@ -114,14 +137,19 @@ async function createNewChat() {
         userId: currentUser.uid, title: "محادثة جديدة", createdAt: new Date(), isPinned: false
     });
     currentChatId = docRef.id;
-    document.getElementById('chatContainer').innerHTML = '';
-    document.getElementById('welcomeLogo').style.display = 'block';
+    const chatContainer = document.getElementById('chatContainer');
+    if(chatContainer) chatContainer.innerHTML = '';
+    
+    const welcomeLogo = document.getElementById('welcomeLogo');
+    if(welcomeLogo) welcomeLogo.style.display = 'block';
+    
     await loadChatHistory(currentUser.uid);
 }
 
 async function loadChatHistory(uid) {
     const db = window.firebaseDb;
     const list = document.getElementById('chatHistoryList');
+    if(!list) return;
     list.innerHTML = '';
 
     const q = window.firebaseFunctions.query(window.firebaseFunctions.collection(db, "user_chats"), window.firebaseFunctions.where("userId", "==", uid));
@@ -153,7 +181,6 @@ async function loadChatHistory(uid) {
     });
 }
 
-// دوال القائمة المنسدلة
 window.renameChat = async (chatId, oldTitle) => {
     const newTitle = prompt("اسم المحادثة الجديد:", oldTitle);
     if (newTitle) {
@@ -161,10 +188,12 @@ window.renameChat = async (chatId, oldTitle) => {
         await loadChatHistory(currentUser.uid);
     }
 };
+
 window.togglePinChat = async (chatId, isPinned) => {
     await window.firebaseFunctions.updateDoc(window.firebaseFunctions.doc(window.firebaseDb, "user_chats", chatId), { isPinned: !isPinned });
     await loadChatHistory(currentUser.uid);
 };
+
 window.deleteChat = async (chatId) => {
     if(confirm("متأكد إنك عايز تمسح المحادثة دي؟")) {
         await window.firebaseFunctions.deleteDoc(window.firebaseFunctions.doc(window.firebaseDb, "user_chats", chatId));
@@ -175,8 +204,11 @@ window.deleteChat = async (chatId) => {
 async function openChat(chatId) {
     currentChatId = chatId;
     const container = document.getElementById('chatContainer');
+    if(!container) return;
     container.innerHTML = '';
-    document.getElementById('welcomeLogo').style.display = 'none';
+    
+    const welcomeLogo = document.getElementById('welcomeLogo');
+    if(welcomeLogo) welcomeLogo.style.display = 'none';
 
     const q = window.firebaseFunctions.query(window.firebaseFunctions.collection(window.firebaseDb, `user_chats/${chatId}/messages`), window.firebaseFunctions.orderBy("timestamp", "asc"));
     const snap = await window.firebaseFunctions.getDocs(q);
@@ -185,11 +217,11 @@ async function openChat(chatId) {
 
 function appendMessageToUI(role, text) {
     const container = document.getElementById('chatContainer');
+    if(!container) return;
+    
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${role}`;
     msgDiv.innerText = text;
-    // خلي بالك: تأكد إن كلاسات .message .user .assistant موجودة في style.css بتاعك
-    // لو مش موجودة، ممكن تحط ستايل inline هنا مؤقتاً
     container.appendChild(msgDiv);
     container.scrollTop = container.scrollHeight;
 }
