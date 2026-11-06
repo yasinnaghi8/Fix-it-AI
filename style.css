@@ -1,0 +1,108 @@
+:root {
+    --bg-dark: #0a0a0a;
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --text-main: #e0e0e0;
+    --accent: #00b894;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    display: flex;
+    height: 100vh;
+    height: 100dvh; /* للموبايل */
+    overflow: hidden;
+}
+
+.sidebar {
+    width: 260px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-left: 1px solid var(--glass-border);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    align-items: flex-start;
+}
+
+.sidebar.collapsed { width: 70px; align-items: center; }
+.sidebar.collapsed .sidebar-header { justify-content: center; flex-direction: column; gap: 10px; }
+.sidebar.collapsed .sidebar-actions { flex-direction: column; align-items: center; }
+
+.sidebar-header { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+.sidebar-logo { width: 40px; object-fit: contain; }
+.sidebar-actions { display: flex; gap: 10px; width: 100%; justify-content: flex-start; }
+
+#searchContainer { width: 100%; margin-top: 10px; }
+#searchInput {
+    width: 100%; padding: 10px; background: rgba(255,255,255,0.05);
+    border: 1px solid var(--glass-border); border-radius: 8px; color: white; font-family: 'Cairo';
+}
+
+.main-content { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; }
+
+.welcome-logo {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex: 1; transition: all 0.5s ease;
+}
+
+.welcome-logo.started { flex: 0; justify-content: flex-start; padding-top: 10px; margin-bottom: 10px; }
+.welcome-logo.started .welcome-text { display: none; }
+
+.logo-container { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+.main-logo { width: 60px; }
+.brand-right { display: flex; flex-direction: row-reverse; align-items: center; gap: 5px; color: #888; font-size: 14px; }
+.naghi-logo { height: 20px; }
+.welcome-text { font-size: 24px; color: #e0e0e0; text-align: center; font-weight: 700; }
+
+.chat-container {
+    flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column;
+    max-width: 900px; margin: 0 auto; width: 100%;
+}
+
+.input-area { padding: 15px; display: flex; justify-content: center; background: linear-gradient(to top, var(--bg-dark) 50%, transparent); }
+
+.input-box {
+    width: 100%; max-width: 800px; background: var(--glass-bg); backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border); border-radius: 30px; padding: 10px 20px;
+    display: flex; align-items: flex-end; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+textarea {
+    flex: 1; background: transparent; border: none; color: white; font-size: 16px;
+    font-family: 'Cairo'; resize: none; outline: none; max-height: 120px;
+}
+
+.send-btn { background: transparent; border: none; color: var(--accent); cursor: pointer; padding: 5px; }
+.send-btn:hover { color: #fff; }
+
+.message { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 12px; line-height: 1.8; font-size: 16px; }
+.user-msg { background: #1e1e1e; align-self: flex-start; border-radius: 12px 12px 0 12px; max-width: 85%; }
+.ai-msg { background: transparent; border-right: 3px solid var(--accent); padding-right: 15px; max-width: 100%; white-space: pre-wrap; font-size: 18px; }
+
+.typing::after { content: '|'; animation: blink 1s infinite; color: var(--accent); }
+@keyframes blink { 50% { opacity: 0; } }
+
+.icon-btn { background: transparent; border: 1px solid var(--glass-border); color: white; padding: 8px; border-radius: 10px; cursor: pointer; display: flex; }
+.icon-btn:hover { background: rgba(255,255,255,0.1); }
+.hidden { display: none !important; }
+
+@media (max-width: 768px) {
+    .sidebar { position: absolute; height: 100%; z-index: 10; }
+    .sidebar.collapsed { width: 0; padding: 0; border: none; }
+    .sidebar-actions, .sidebar-logo, .sidebar-header { display: none; }
+    .sidebar:not(.collapsed) .sidebar-header, .sidebar:not(.collapsed) .sidebar-logo { display: flex; }
+    .sidebar:not(.collapsed) .sidebar-actions { display: flex; }
+    .chat-container { padding: 10px; }
+    .message { font-size: 15px; }
+    .input-box { padding: 8px 15px; }
+    .welcome-text { font-size: 18px; padding: 0 10px; }
+    .main-logo { width: 50px; }
+}

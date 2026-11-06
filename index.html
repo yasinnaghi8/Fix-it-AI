@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixIt AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- الشريط الجانبي -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <!-- اللوجو الجديد logo2.png -->
+            <img src="logo2.png" alt="Logo" class="sidebar-logo">
+            <button id="toggleSidebar" class="icon-btn">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+        </div>
+        
+        <div class="sidebar-actions">
+            <button class="icon-btn" id="searchBtn" title="بحث في المحادثات">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button class="icon-btn" id="newChatBtn" title="محادثة جديدة">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+        </div>
+
+        <div id="searchContainer" class="hidden">
+            <input type="text" id="searchInput" placeholder="ابحث...">
+        </div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content">
+        <div class="welcome-logo" id="welcomeLogo">
+            <div class="logo-container">
+                <img src="logo.png" alt="FixIt AI Logo" class="main-logo">
+                <div class="brand-right">
+                    <span>by</span>
+                    <img src="naghi-logo.png" alt="Naghi Logo" class="naghi-logo">
+                </div>
+            </div>
+            <h1 class="welcome-text">مرحباً، ما المشكلة في منزلك اليوم؟</h1>
+        </div>
+
+        <main class="chat-container" id="chatContainer"></main>
+
+        <div class="input-area">
+            <div class="input-box">
+                <textarea id="problemText" rows="1" placeholder="اكتب مشكلتك هنا..."></textarea>
+                <button id="btnDiagnose" class="send-btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="groq-ai.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
