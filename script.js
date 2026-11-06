@@ -36,11 +36,12 @@ function initApp() {
         if(authError) {
             authError.textContent = msg; 
             authError.style.display = 'block'; 
+        } else {
+            alert(msg);
         }
     };
 
     onAuthStateChanged(auth, async (user) => {
-        // حماية العناصر لو مش موجودة
         const authScreen = document.getElementById('authScreen');
         const mainContent = document.querySelector('.main-content');
         const sidebar = document.getElementById('sidebar');
@@ -108,22 +109,26 @@ function initApp() {
         
         appendMessageToUI('user', text);
         
+        // حفظ رسالة المستخدم
         await addDoc(collection(db, `user_chats/${currentChatId}/messages`), {
             role: "user", content: text, timestamp: new Date()
         });
 
+        // التسمية التلقائية
         const chatDoc = await getDoc(doc(db, "user_chats", currentChatId));
-        if (chatDoc.data().title === "محادثة جديدة") {
+        if (chatDoc.data() && chatDoc.data().title === "محادثة جديدة") {
             const newTitle = text.split(" ").slice(0, 4).join(" ") + "...";
             await updateDoc(doc(db, "user_chats", currentChatId), { title: newTitle });
             await loadChatHistory(currentUser.uid);
         }
 
+        // رد البوت
         appendMessageToUI('assistant', "جاري التفكير...");
         const reply = await askGroqAI(text);
         const chatContainer = document.getElementById('chatContainer');
         if(chatContainer) chatContainer.lastElementChild.innerText = reply;
 
+        // حفظ رد البوت
         await addDoc(collection(db, `user_chats/${currentChatId}/messages`), {
             role: "assistant", content: reply, timestamp: new Date()
         });
@@ -152,12 +157,19 @@ async function loadChatHistory(uid) {
     if(!list) return;
     list.innerHTML = '';
 
-    const q = window.firebaseFunctions.query(window.firebaseFunctions.collection(db, "user_chats"), window.firebaseFunctions.where("userId", "==", uid));
+    // هنبعت نجيب كل المحادثات ونفلترها في المتصفح لتجنب مشاكل القواعد
+    const q = window.firebaseFunctions.query(window.firebaseFunctions.collection(db, "user_chats"));
     const querySnapshot = await window.firebaseFunctions.getDocs(q);
     
     let chats = [];
-    querySnapshot.forEach((doc) => chats.push({ id: doc.id, ...doc.data() }));
-    chats.sort((a, b) => (b.isPinned === true) - (a.isPinned === true) || b.createdAt.toMillis() - a.createdAt.toMillis());
+    querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if(data.userId === uid) { // الفلترة هنا
+            chats.push({ id: doc.id, ...data });
+        }
+    });
+    
+    chats.sort((a, b) => (b.isPinned === true) - (a.isPinned === true) || (b.createdAt ? b.createdAt.toMillis() : 0) - (a.createdAt ? a.createdAt.toMillis() : 0));
 
     chats.forEach(chat => {
         const div = document.createElement('div');
