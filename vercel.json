@@ -1,19 +1,17 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "server.py",
-      "use": "@vercel/python"
-    }
+    { "src": "server.py", "use": "@vercel/python" },
+    { "src": "**/*.html", "use": "@vercel/static" },
+    { "src": "**/*.css", "use": "@vercel/static" },
+    { "src": "**/*.js", "use": "@vercel/static" },
+    { "src": "**/*.png", "use": "@vercel/static" },
+    { "src": "**/*.jpg", "use": "@vercel/static" },
+    { "src": "**/*.json", "use": "@vercel/static" }
   ],
   "routes": [
-    {
-      "src": "/ask",
-      "dest": "server.py"
-    },
-    {
-      "src": "/health",
-      "dest": "server.py"
-    }
+    { "src": "/ask", "dest": "server.py" },
+    { "src": "/health", "dest": "server.py" },
+    { "src": "/(.*)", "dest": "/$1" }
   ]
 }
