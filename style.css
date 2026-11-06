@@ -106,3 +106,34 @@ textarea {
     .welcome-text { font-size: 18px; padding: 0 10px; }
     .main-logo { width: 50px; }
 }
+/* ستايل شاشة الدخول */
+.auth-screen { position: fixed; inset: 0; background: #0f0f0f; display: flex; justify-content: center; align-items: center; z-index: 9999; }
+.auth-box { background: #1e1e1e; padding: 30px; border-radius: 12px; width: 100%; max-width: 400px; text-align: center; border: 1px solid #333; }
+.auth-logo { width: 80px; margin-bottom: 20px; }
+.auth-input { width: 100%; padding: 12px; margin: 8px 0; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 8px; outline: none; }
+.google-btn { background: #fff; color: #333; width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: bold; margin-top: 10px; }
+.auth-btn { width: 100%; padding: 12px; margin: 8px 0; background: #007bff; color: #fff; border: none; border-radius: 8px; cursor: pointer; }
+.auth-btn.secondary { background: transparent; border: 1px solid #007bff; color: #007bff; }
+.auth-link { background: none; border: none; color: #aaa; cursor: pointer; font-size: 14px; margin-top: 10px; text-decoration: underline; }
+.auth-error { color: #ff6b6b; font-size: 14px; margin-top: 10px; display: none; }
+.divider { margin: 15px 0; color: #666; }
+
+/* ستايل قائمة المحادثات */
+.chat-history-container { flex: 1; overflow-y: auto; margin-top: 15px; padding: 0 10px; }
+.chat-history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-radius: 8px; cursor: pointer; transition: background 0.2s; position: relative; color: #eee; }
+.chat-history-item:hover { background: rgba(255,255,255,0.1); }
+.chat-options { position: relative; }
+.options-btn { background: none; border: none; color: #aaa; cursor: pointer; font-size: 18px; }
+.dropdown-menu { position: absolute; left: 100%; top: 0; background: #2a2a2a; border: 1px solid #444; border-radius: 8px; min-width: 120px; z-index: 1000; display: flex; flex-direction: column; }
+.dropdown-menu.hidden { display: none; }
+.dropdown-menu button { background: none; border: none; color: #eee; padding: 8px 12px; text-align: right; cursor: pointer; }
+.dropdown-menu button:hover { background: rgba(255,255,255,0.1); }
+
+/* معلومات المستخدم */
+.user-info { display: flex; align-items: center; justify-content: space-between; padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto; }
+.user-info span { font-size: 12px; color: #aaa; overflow: hidden; text-overflow: ellipsis; }
+
+/* ستايل الشات الأساسي (لو مش عندك) */
+.message { padding: 12px 16px; border-radius: 12px; margin-bottom: 10px; max-width: 80%; word-wrap: break-word; line-height: 1.5; }
+.message.user { background: #007bff; color: #fff; margin-left: auto; border-bottom-left-radius: 2px; }
+.message.assistant { background: #2a2a2a; color: #eee; margin-right: auto; border-bottom-right-radius: 2px; }
