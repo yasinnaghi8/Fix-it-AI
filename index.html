@@ -9,7 +9,7 @@
 </head>
 <body>
 
-    <!-- 1. شاشة تسجيل الدخول (بتظهر الأول) -->
+    <!-- 1. شاشة تسجيل الدخول -->
     <div id="authScreen" class="auth-screen">
         <div class="auth-box">
             <img src="logo2.png" alt="FixIt AI" class="auth-logo">
@@ -33,10 +33,8 @@
         </div>
     </div>
 
-    <!-- 2. المحتوى الأساسي (بيظهر بعد تسجيل الدخول) -->
+    <!-- 2. المحتوى الأساسي -->
     <div id="appContent" style="display: none;">
-        
-        <!-- الشريط الجانبي (تصميمك الأصلي + إضافة المحادثات) -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <img src="logo2.png" alt="Logo" class="sidebar-logo">
@@ -58,10 +56,8 @@
                 <input type="text" id="searchInput" placeholder="ابحث...">
             </div>
 
-            <!-- قسم المحادثات السابقة -->
             <div class="chat-history-container" id="chatHistoryList"></div>
 
-            <!-- زرار تسجيل الخروج -->
             <div id="userInfo" class="user-info hidden">
                 <span id="userEmail"></span>
                 <button id="logoutBtn" class="icon-btn" title="تسجيل الخروج">
@@ -70,7 +66,6 @@
             </div>
         </div>
 
-        <!-- المحتوى الرئيسي (تصميمك الأصلي) -->
         <div class="main-content">
             <div class="welcome-logo" id="welcomeLogo">
                 <div class="logo-container">
@@ -96,7 +91,6 @@
         </div>
     </div>
 
-    <!-- السكربتات -->
     <script type="module" src="firebase-config.js"></script>
     <script src="groq-ai.js"></script>
     <script src="script.js"></script>
