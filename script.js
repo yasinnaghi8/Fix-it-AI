@@ -36,8 +36,6 @@ function initApp() {
         if(authError) {
             authError.textContent = msg; 
             authError.style.display = 'block'; 
-        } else {
-            alert(msg);
         }
     };
 
@@ -67,7 +65,6 @@ function initApp() {
         }
     });
 
-    // أزرار الدخول
     const googleBtn = document.getElementById('googleSignInBtn');
     if(googleBtn) googleBtn.addEventListener('click', () => {
         signInWithPopup(auth, new GoogleAuthProvider()).catch(err => showError(err.message));
@@ -96,7 +93,6 @@ function initApp() {
     const newChatBtn = document.getElementById('newChatBtn');
     if(newChatBtn) newChatBtn.addEventListener('click', createNewChat);
 
-    // إرسال الرسالة
     const diagnoseBtn = document.getElementById('btnDiagnose');
     if(diagnoseBtn) diagnoseBtn.addEventListener('click', async () => {
         const input = document.getElementById('problemText');
@@ -109,12 +105,10 @@ function initApp() {
         
         appendMessageToUI('user', text);
         
-        // حفظ رسالة المستخدم
         await addDoc(collection(db, `user_chats/${currentChatId}/messages`), {
             role: "user", content: text, timestamp: new Date()
         });
 
-        // التسمية التلقائية
         const chatDoc = await getDoc(doc(db, "user_chats", currentChatId));
         if (chatDoc.data() && chatDoc.data().title === "محادثة جديدة") {
             const newTitle = text.split(" ").slice(0, 4).join(" ") + "...";
@@ -122,13 +116,11 @@ function initApp() {
             await loadChatHistory(currentUser.uid);
         }
 
-        // رد البوت
         appendMessageToUI('assistant', "جاري التفكير...");
         const reply = await askGroqAI(text);
         const chatContainer = document.getElementById('chatContainer');
         if(chatContainer) chatContainer.lastElementChild.innerText = reply;
 
-        // حفظ رد البوت
         await addDoc(collection(db, `user_chats/${currentChatId}/messages`), {
             role: "assistant", content: reply, timestamp: new Date()
         });
@@ -157,14 +149,13 @@ async function loadChatHistory(uid) {
     if(!list) return;
     list.innerHTML = '';
 
-    // هنبعت نجيب كل المحادثات ونفلترها في المتصفح لتجنب مشاكل القواعد
     const q = window.firebaseFunctions.query(window.firebaseFunctions.collection(db, "user_chats"));
     const querySnapshot = await window.firebaseFunctions.getDocs(q);
     
     let chats = [];
     querySnapshot.forEach((doc) => {
         const data = doc.data();
-        if(data.userId === uid) { // الفلترة هنا
+        if(data.userId === uid) {
             chats.push({ id: doc.id, ...data });
         }
     });
