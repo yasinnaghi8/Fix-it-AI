@@ -1,205 +1,80 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const userLang = navigator.language || navigator.userLanguage;
-    const welcomeText = document.getElementById('welcomeText');
-    const inputBox = document.getElementById('problemText');
+// التعديل الجديد: كود قراءة اسم المستخدم وتسجيل الخروج
+document.addEventListener("DOMContentLoaded", function() {
+    var savedName = localStorage.getItem("userName");
+    var nameSpan = document.getElementById("sidebarUserName");
+    var avatarImg = document.getElementById("userAvatar");
     
-    if (welcomeText && inputBox) {
-        if (userLang.startsWith('tr')) {
-            welcomeText.innerText = "Merhaba, bugün evinizdeki sorun nedir?";
-            inputBox.placeholder = "Sorununuzu buraya yazın...";
-            document.documentElement.dir = "ltr";
-        } else if (!userLang.startsWith('ar')) {
-            welcomeText.innerText = "Welcome, what is the problem in your home today?";
-            inputBox.placeholder = "Type your problem here...";
-            document.documentElement.dir = "ltr";
-        }
+    if (!savedName) {
+        window.location.href = "auth.html"; // لو مفيش تسجيل دخول يروح للصفحة
+        return;
     }
-
-    const checkFirebase = setInterval(() => {
-        if (window.firebaseAuth && window.firebaseFunctions) {
-            clearInterval(checkFirebase);
-            initApp();
-        }
-    }, 100);
+    if (nameSpan) nameSpan.textContent = savedName;
+    if (avatarImg) avatarImg.src = "https://ui-avatars.com/api/?name=" + savedName + "&background=00b894&color=fff";
 });
 
-let currentUser = null;
-let currentChatId = null;
+function logout() {
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+    window.location.href = "auth.html";
+}
 
-function initApp() {
-    const { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut, collection, addDoc, query, getDocs, doc, updateDoc, getDoc, orderBy } = window.firebaseFunctions;
-    const auth = window.firebaseAuth;
-    const db = window.firebaseDb;
-    const authError = document.getElementById('authError');
+// الكود الأصلي بتاعك من هنا زي ما هو بالظبط
+var chatContainer = document.getElementById("chatContainer");
+var welcomeLogo = document.getElementById("welcomeLogo");
+var sidebar = document.getElementById("sidebar");
+var toggleSidebar = document.getElementById("toggleSidebar");
+var searchBtn = document.getElementById("searchBtn");
+var newChatBtn = document.getElementById("newChatBtn");
+var searchContainer = document.getElementById("searchContainer");
+var searchInput = document.getElementById("searchInput");
+var btnDiagnose = document.getElementById("btnDiagnose");
+var problemText = document.getElementById("problemText");
 
-    const showError = (msg) => { 
-        if(authError) { authError.textContent = msg; authError.style.display = 'block'; } 
-    };
+var isChatStarted = false;
 
-    onAuthStateChanged(auth, async (user) => {
-        const authScreen = document.getElementById('authScreen');
-        const appContent = document.getElementById('appContent');
-        const userInfo = document.getElementById('userInfo');
-
-        if (user) {
-            currentUser = user;
-            if (authScreen) authScreen.style.setProperty('display', 'none', 'important');
-            if (appContent) appContent.style.display = 'block';
-            if (userInfo) userInfo.classList.remove('hidden');
-            
-            // تحديث الصورة والاسم
-            const avatarImg = document.getElementById('userAvatar');
-            const nameDisplay = document.getElementById('userNameDisplay');
-            if (avatarImg && user.photoURL) avatarImg.src = user.photoURL;
-            if (nameDisplay) nameDisplay.textContent = user.displayName || user.email.split('@')[0];
-            
-            await loadChatHistory(user.uid);
-            
-            // لو مفيش محادثة مفتوحة، نبدأ واحدة جديدة أوتوماتيك
-            if (!currentChatId) {
-                await createNewChat();
-            }
-        } else {
-            currentUser = null;
-            currentChatId = null;
-            if (authScreen) authScreen.style.setProperty('display', 'flex', 'important');
-            if (appContent) appContent.style.display = 'none';
-            if (userInfo) userInfo.classList.add('hidden');
+toggleSidebar.addEventListener("click", function() { sidebar.classList.toggle("collapsed"); });
+searchBtn.addEventListener("click", function() { searchContainer.classList.toggle("hidden"); if (!searchContainer.classList.contains("hidden")) { searchInput.focus(); } });
+newChatBtn.addEventListener("click", function() {
+    chatContainer.innerHTML = ""; welcomeLogo.classList.remove("started"); isChatStarted = false;
+    sidebar.classList.remove("collapsed"); searchContainer.classList.add("hidden");
+    searchInput.value = ""; problemText.value = ""; problemText.style.height = "auto";
+});
+searchInput.addEventListener("input", function(e) {
+    var term = e.target.value.toLowerCase();
+    var messages = chatContainer.querySelectorAll(".message");
+    messages.forEach(function(msg) { if (msg.textContent.toLowerCase().includes(term)) { msg.style.display = "block"; } else { msg.style.display = "none"; } });
+});
+function addMessage(text, type) {
+    if (!isChatStarted) { welcomeLogo.classList.add("started"); sidebar.classList.add("collapsed"); isChatStarted = true; }
+    var msgDiv = document.createElement("div");
+    msgDiv.classList.add("message", type === "user" ? "user-msg" : "ai-msg");
+    msgDiv.textContent = text;
+    chatContainer.appendChild(msgDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    return msgDiv;
+}
+function typeWriter(element, text, speed = 10) {
+    element.innerHTML = ""; element.classList.add("typing"); let i = 0;
+    return new Promise(function(resolve) {
+        function type() {
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i); i++;
+                var isBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 50;
+                if (isBottom) { chatContainer.scrollTop = chatContainer.scrollHeight; }
+                setTimeout(type, speed);
+            } else { element.classList.remove("typing"); resolve(); }
         }
-    });
-
-    // أزرار الدخول
-    document.getElementById('googleSignInBtn')?.addEventListener('click', () => {
-        signInWithPopup(auth, new GoogleAuthProvider()).catch(err => showError(err.message));
-    });
-    document.getElementById('emailSignInBtn')?.addEventListener('click', () => {
-        signInWithEmailAndPassword(auth, document.getElementById('authEmail').value, document.getElementById('authPassword').value).catch(err => showError(err.message));
-    });
-    document.getElementById('emailSignUpBtn')?.addEventListener('click', () => {
-        createUserWithEmailAndPassword(auth, document.getElementById('authEmail').value, document.getElementById('authPassword').value).catch(err => showError(err.message));
-    });
-    document.getElementById('forgotPasswordBtn')?.addEventListener('click', () => {
-        const email = document.getElementById('authEmail').value;
-        if (!email) return showError('اكتب الإيميل الأول.');
-        sendPasswordResetEmail(auth, email).then(() => alert('تم إرسال رابط إعادة التعيين.')).catch(err => showError(err.message));
-    });
-    document.getElementById('logoutBtn')?.addEventListener('click', () => signOut(auth));
-
-    // زرار فتح وقفل الشريط الجانبي
-    document.getElementById('toggleSidebar')?.addEventListener('click', () => {
-        document.getElementById('sidebar').classList.toggle('collapsed');
-    });
-
-    // زرار محادثة جديدة
-    document.getElementById('newChatBtn')?.addEventListener('click', createNewChat);
-
-    // إرسال الرسالة
-    document.getElementById('btnDiagnose')?.addEventListener('click', async () => {
-        const input = document.getElementById('problemText');
-        const text = input.value.trim();
-        if (!text || !currentUser) return;
-
-        input.value = '';
-        document.getElementById('welcomeLogo').style.display = 'none';
-        document.getElementById('chatHeader').style.display = 'block';
-        
-        appendMessageToUI('user', text);
-        
-        await addDoc(collection(db, `user_chats/${currentChatId}/messages`), {
-            role: "user", content: text, timestamp: new Date()
-        });
-
-        // التسمية التلقائية للمحادثة
-        const chatDoc = await getDoc(doc(db, "user_chats", currentChatId));
-        if (chatDoc.exists() && chatDoc.data().title === "محادثة جديدة") {
-            const newTitle = text.split(" ").slice(0, 4).join(" ") + "...";
-            await updateDoc(doc(db, "user_chats", currentChatId), { title: newTitle });
-            document.getElementById('chatHeader').innerText = newTitle; // تحديث العنوان فوق
-            await loadChatHistory(currentUser.uid);
-        }
-
-        appendMessageToUI('assistant', "جاري التفكير...");
-        const reply = await askGroqAI(text);
-        const chatContainer = document.getElementById('chatContainer');
-        if(chatContainer && chatContainer.lastElementChild) {
-            chatContainer.lastElementChild.innerText = reply;
-        }
-
-        await addDoc(collection(db, `user_chats/${currentChatId}/messages`), {
-            role: "assistant", content: reply, timestamp: new Date()
-        });
+        type();
     });
 }
-
-// إنشاء محادثة جديدة (بس واحدة صح)
-async function createNewChat() {
-    if (!currentUser) return;
-    const db = window.firebaseDb;
-    
-    // بنعمل المحادثة
-    const docRef = await window.firebaseFunctions.addDoc(window.firebaseFunctions.collection(db, "user_chats"), {
-        userId: currentUser.uid, title: "محادثة جديدة", createdAt: new Date()
-    });
-    
-    currentChatId = docRef.id;
-    document.getElementById('chatContainer').innerHTML = '';
-    document.getElementById('welcomeLogo').style.display = 'block';
-    document.getElementById('chatHeader').style.display = 'none';
-    
-    await loadChatHistory(currentUser.uid);
-}
-
-// تحميل المحادثات في الشريط الجانبي
-async function loadChatHistory(uid) {
-    const db = window.firebaseDb;
-    const list = document.getElementById('chatHistoryList');
-    if(!list) return;
-    list.innerHTML = '';
-
-    const q = window.firebaseFunctions.query(window.firebaseFunctions.collection(db, "user_chats"));
-    const querySnapshot = await window.firebaseFunctions.getDocs(q);
-    
-    let chats = [];
-    querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        if(data.userId === uid) chats.push({ id: doc.id, ...data });
-    });
-    
-    chats.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-
-    chats.forEach(chat => {
-        const div = document.createElement('div');
-        div.className = 'chat-history-item';
-        div.innerHTML = `<span class="chat-title">${chat.title}</span>`;
-        div.querySelector('.chat-title').addEventListener('click', () => openChat(chat.id, chat.title));
-        list.appendChild(div);
-    });
-}
-
-// فتح محادثة قديمة
-async function openChat(chatId, title) {
-    currentChatId = chatId;
-    const container = document.getElementById('chatContainer');
-    if(!container) return;
-    container.innerHTML = '';
-    
-    document.getElementById('welcomeLogo').style.display = 'none';
-    document.getElementById('chatHeader').style.display = 'block';
-    document.getElementById('chatHeader').innerText = title;
-
-    const q = window.firebaseFunctions.query(window.firebaseFunctions.collection(window.firebaseDb, `user_chats/${chatId}/messages`), window.firebaseFunctions.orderBy("timestamp", "asc"));
-    const snap = await window.firebaseFunctions.getDocs(q);
-    snap.forEach(doc => appendMessageToUI(doc.data().role, doc.data().content));
-}
-
-// إضافة رسالة للشات
-function appendMessageToUI(role, text) {
-    const container = document.getElementById('chatContainer');
-    if(!container) return;
-    
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `message ${role}`;
-    msgDiv.innerText = text;
-    container.appendChild(msgDiv);
-    container.scrollTop = container.scrollHeight;
-}
+btnDiagnose.addEventListener("click", async function() {
+    var userText = problemText.value.trim();
+    if (!userText) return;
+    addMessage(userText, "user"); problemText.value = ""; problemText.style.height = "auto";
+    var aiMsgDiv = addMessage("", "ai");
+    var aiAnswer = await askGroqAI(userText);
+    if (!aiAnswer) { aiAnswer = "حدث خطأ، تأكد من الاتصال."; }
+    await typeWriter(aiMsgDiv, aiAnswer, 15);
+});
+problemText.addEventListener("input", function() { this.style.height = "auto"; this.style.height = (this.scrollHeight) + "px"; });
+problemText.addEventListener("keydown", function(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); btnDiagnose.click(); } });
