@@ -9,79 +9,68 @@
 </head>
 <body>
 
-    <!-- 1. شاشة تسجيل الدخول -->
+    <!-- شاشة تسجيل الدخول -->
     <div id="authScreen" class="auth-screen">
         <div class="auth-box">
             <img src="logo2.png" alt="FixIt AI" class="auth-logo">
             <h2>تسجيل الدخول</h2>
-            
             <button id="googleSignInBtn" class="google-btn">
-                <img src="google.png" width="20" alt="Google">
-                الدخول باستخدام Google
+                <img src="google.png" width="20" alt="Google"> الدخول باستخدام Google
             </button>
-            
             <div class="divider">أو</div>
-            
             <input type="email" id="authEmail" placeholder="البريد الإلكتروني" class="auth-input">
             <input type="password" id="authPassword" placeholder="كلمة المرور" class="auth-input">
-            
             <button id="emailSignInBtn" class="auth-btn">تسجيل الدخول</button>
             <button id="emailSignUpBtn" class="auth-btn secondary">إنشاء حساب جديد</button>
             <button id="forgotPasswordBtn" class="auth-link">نسيت كلمة المرور؟</button>
-            
             <p id="authError" class="auth-error"></p>
         </div>
     </div>
 
-    <!-- 2. المحتوى الأساسي (الشات) -->
+    <!-- الموقع الأساسي -->
     <div id="appContent" style="display: none;">
         
         <!-- الشريط الجانبي -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <img src="logo2.png" alt="Logo" class="sidebar-logo">
+                <!-- اللوجو صغير زي ما طلبت -->
+                <img src="logo2.png" alt="Logo" class="sidebar-logo" style="width: 40px;">
                 <button id="toggleSidebar" class="icon-btn">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
                 </button>
             </div>
             
             <div class="sidebar-actions">
-                <button class="icon-btn" id="searchBtn" title="بحث في المحادثات">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                </button>
-                <button class="icon-btn" id="newChatBtn" title="محادثة جديدة">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                </button>
-            </div>
-
-            <div id="searchContainer" class="hidden" style="padding: 0 10px; margin-bottom: 10px;">
-                <input type="text" id="searchInput" placeholder="ابحث..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: white;">
+                <button class="icon-btn" id="searchBtn"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
+                <button class="icon-btn" id="newChatBtn"><svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
             </div>
 
             <!-- قائمة المحادثات -->
             <div class="chat-history-container" id="chatHistoryList"></div>
 
-            <!-- معلومات المستخدم -->
+            <!-- بيانات المستخدم (تحت) -->
             <div id="userInfo" class="user-info hidden">
-                <div class="profile-info" style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
-                    <img id="userAvatar" src="https://www.gstatic.com/images/branding/product/1x/avatar_circle_blue_512dp.png" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover;">
-                    <span id="userNameDisplay" style="font-size: 14px; color: #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></span>
+                <div class="profile-info" style="display: flex; align-items: center; gap: 10px;">
+                    <img id="userAvatar" src="https://www.gstatic.com/images/branding/product/1x/avatar_circle_blue_512dp.png" style="width: 35px; height: 35px; border-radius: 50%;">
+                    <span id="userNameDisplay" style="font-size: 14px; color: #fff;"></span>
                 </div>
-                <button id="logoutBtn" class="icon-btn" title="تسجيل الخروج">
+                <button id="logoutBtn" class="icon-btn" title="خروج">
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 </button>
             </div>
         </div>
 
-        <!-- مساحة الشات -->
+        <!-- مساحة الشات الرئيسية -->
         <div class="main-content">
+            <!-- عنوان المحادثة (فوق) -->
+            <div class="chat-header" id="chatHeader" style="display: none; padding: 15px; text-align: center; border-bottom: 1px solid #333; font-weight: bold; color: #00ffcc;">
+                محادثة جديدة
+            </div>
+
             <div class="welcome-logo" id="welcomeLogo">
                 <div class="logo-container">
                     <img src="logo.png" alt="FixIt AI Logo" class="main-logo">
-                    <div class="brand-right">
-                        <span>by</span>
-                        <img src="naghi-logo.png" alt="Naghi Logo" class="naghi-logo">
-                    </div>
+                    <div class="brand-right"><span>by</span><img src="naghi-logo.png" alt="Naghi Logo" class="naghi-logo"></div>
                 </div>
                 <h1 class="welcome-text" id="welcomeText">مرحباً، ما المشكلة في منزلك اليوم؟</h1>
             </div>
@@ -99,7 +88,6 @@
         </div>
     </div>
 
-    <!-- السكربتات -->
     <script type="module" src="firebase-config.js"></script>
     <script src="groq-ai.js"></script>
     <script src="script.js"></script>
