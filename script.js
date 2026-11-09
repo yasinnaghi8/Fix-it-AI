@@ -2,6 +2,7 @@ var chatContainer = document.getElementById("chatContainer");
 var welcomeLogo = document.getElementById("welcomeLogo");
 var sidebar = document.getElementById("sidebar");
 var toggleSidebar = document.getElementById("toggleSidebar");
+var openSidebarBtn = document.getElementById("openSidebarBtn");
 var searchBtn = document.getElementById("searchBtn");
 var newChatBtn = document.getElementById("newChatBtn");
 var searchContainer = document.getElementById("searchContainer");
@@ -10,119 +11,136 @@ var btnDiagnose = document.getElementById("btnDiagnose");
 var problemText = document.getElementById("problemText");
 
 var isChatStarted = false;
-var currentChatIndex = -1; // عشان نعرف إحنا بنكتب في أنهي محادثة
+var currentChatIndex = -1;
+var chatToDeleteIndex = -1;
 
 // 1. تشغيل أول ما الصفحة تفتح
 document.addEventListener("DOMContentLoaded", function() {
     var savedName = localStorage.getItem("userName");
+    var savedAvatar = localStorage.getItem("userAvatar");
     var nameSpan = document.getElementById("sidebarUserName");
     var avatarImg = document.getElementById("userAvatar");
 
-    if (!savedName) {
-        window.location.href = "auth.html"; // لو مفيش تسجيل دخول
-        return;
-    }
+    if (!savedName) { window.location.href = "auth.html"; return; }
     
     if (nameSpan) nameSpan.textContent = savedName;
-    if (avatarImg) avatarImg.src = "https://ui-avatars.com/api/?name=" + savedName + "&background=00b894&color=fff";
+    if (avatarImg && savedAvatar) avatarImg.src = savedAvatar;
     
-    loadHistory(); // تحميل المحادثات القديمة
+    // في الموبايل نقفل السايدبار أول ما نفتح
+    if (window.innerWidth < 768) sidebar.classList.add("collapsed");
+
+    loadHistory();
 });
 
-// 2. تسجيل الخروج
+// 2. التحكم في السايدبار
+toggleSidebar.addEventListener("click", function() { sidebar.classList.add("collapsed"); });
+openSidebarBtn.addEventListener("click", function() { sidebar.classList.remove("collapsed"); });
+
+// 3. تسجيل الخروج
 function logout() {
     localStorage.removeItem("userName");
+    localStorage.removeItem("userAvatar");
     window.location.href = "auth.html";
 }
 
-// 3. دوال حفظ وعرض المحادثات
+// 4. دوال المحادثات
 function loadHistory() {
     var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
     var historyContainer = document.getElementById("chatHistory");
     historyContainer.innerHTML = "";
     
+    // ترتيب المحادثات: المثبتة (Pin) فوق
+    history.sort((a, b) => b.pinned - a.pinned);
+
     history.forEach(function(chat, index) {
         var div = document.createElement("div");
-        div.style.cssText = "background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; border: 1px solid var(--glass-border); transition: 0.3s;";
+        div.className = "chat-item-container";
         
-        // عرض التاريخ فوق العنوان
-        div.innerHTML = `
-            <div style="color: #00b894; font-size: 10px; margin-bottom: 4px;">${chat.date}</div>
-            <div style="color: white; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${chat.title}</div>
+        // زرار الخيارات (3 نقط)
+        var optBtn = document.createElement("button");
+        optBtn.className = "options-btn";
+        optBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>`;
+        optBtn.onclick = function(e) { e.stopPropagation(); toggleMenu(e, index); };
+
+        // منيو الخيارات
+        var menu = document.createElement("div");
+        menu.className = "options-menu";
+        menu.id = "menu-" + index;
+        menu.innerHTML = `
+            <button class="opt-btn" onclick="pinChat(event, ${index})">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#888" stroke-width="2" fill="none"><path d="M12 17v5M9 10.76V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4.76a2 2 0 0 0 .59 1.42l1.24 1.24A1 1 0 0 1 17 15H7a1 1 0 0 1-.83-1.58l1.24-1.24A2 2 0 0 0 9 10.76Z"/></svg>
+                ${chat.pinned ? 'إلغاء التثبيت' : 'تثبيت'}
+            </button>
+            <button class="opt-btn delete" onclick="askDelete(event, ${index})">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ff4757" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                حذف
+            </button>
         `;
-        
-        div.onclick = function() { openChat(index); };
+
+        // محتوى المحادثة
+        var content = document.createElement("div");
+        content.className = "chat-item-content";
+        content.innerHTML = `
+            <div class="chat-item-date">${chat.date}</div>
+            <div class="chat-item-title">${chat.pinned ? '📌 ' : ''}${chat.title}</div>
+        `;
+        content.onclick = function() { openChat(index); };
+
+        div.appendChild(optBtn);
+        div.appendChild(content);
+        div.appendChild(menu);
         historyContainer.appendChild(div);
     });
 }
 
+function toggleMenu(e, index) {
+    var allMenus = document.querySelectorAll(".options-menu");
+    allMenus.forEach(m => { if(m.id !== "menu-"+index) m.classList.remove("active"); });
+    document.getElementById("menu-"+index).classList.toggle("active");
+}
+
 function openChat(index) {
     var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
-    var chat = history[index];
-    chatContainer.innerHTML = chat.content;
+    history.sort((a, b) => b.pinned - a.pinned);
+    chatContainer.innerHTML = history[index].content;
     welcomeLogo.classList.add("started");
     isChatStarted = true;
     currentChatIndex = index;
-    
-    // على الموبايل نقفل السايدبار بعد ما نختار محادثة
-    if (window.innerWidth < 768) {
-        sidebar.classList.add("collapsed");
+    if (window.innerWidth < 768) sidebar.classList.add("collapsed");
+}
+
+function pinChat(e, index) {
+    e.stopPropagation();
+    var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
+    history.sort((a, b) => b.pinned - a.pinned);
+    history[index].pinned = !history[index].pinned;
+    localStorage.setItem("chatHistory", JSON.stringify(history));
+    loadHistory();
+}
+
+function askDelete(e, index) {
+    e.stopPropagation();
+    chatToDeleteIndex = index;
+    document.getElementById("deleteModal").style.display = "flex";
+}
+
+function closeModal() {
+    document.getElementById("deleteModal").style.display = "none";
+}
+
+function confirmDelete() {
+    var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
+    history.sort((a, b) => b.pinned - a.pinned);
+    history.splice(chatToDeleteIndex, 1);
+    localStorage.setItem("chatHistory", JSON.stringify(history));
+    closeModal();
+    loadHistory();
+    if (currentChatIndex === chatToDeleteIndex) {
+        newChatBtn.click();
     }
 }
 
-// 4. أزرار التحكم الأساسية
-toggleSidebar.addEventListener("click", function() { sidebar.classList.toggle("collapsed"); });
-searchBtn.addEventListener("click", function() { searchContainer.classList.toggle("hidden"); if (!searchContainer.classList.contains("hidden")) { searchInput.focus(); } });
-
-newChatBtn.addEventListener("click", function() {
-    chatContainer.innerHTML = ""; 
-    welcomeLogo.classList.remove("started"); 
-    isChatStarted = false;
-    currentChatIndex = -1; // محادثة جديدة
-    sidebar.classList.remove("collapsed"); 
-    searchContainer.classList.add("hidden");
-    searchInput.value = ""; 
-    problemText.value = ""; 
-    problemText.style.height = "auto";
-});
-
-searchInput.addEventListener("input", function(e) {
-    var term = e.target.value.toLowerCase();
-    var messages = chatContainer.querySelectorAll(".message");
-    messages.forEach(function(msg) { if (msg.textContent.toLowerCase().includes(term)) { msg.style.display = "block"; } else { msg.style.display = "none"; } });
-});
-
-// 5. دوال إضافة الرسائل
-function addMessage(text, type) {
-    if (!isChatStarted) { 
-        welcomeLogo.classList.add("started"); 
-        sidebar.classList.add("collapsed"); 
-        isChatStarted = true; 
-    }
-    var msgDiv = document.createElement("div");
-    msgDiv.classList.add("message", type === "user" ? "user-msg" : "ai-msg");
-    msgDiv.textContent = text;
-    chatContainer.appendChild(msgDiv);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    return msgDiv;
-}
-
-function typeWriter(element, text, speed = 10) {
-    element.innerHTML = ""; element.classList.add("typing"); let i = 0;
-    return new Promise(function(resolve) {
-        function type() {
-            if (i < text.length) {
-                element.innerHTML += text.charAt(i); i++;
-                var isBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 50;
-                if (isBottom) { chatContainer.scrollTop = chatContainer.scrollHeight; }
-                setTimeout(type, speed);
-            } else { element.classList.remove("typing"); resolve(); }
-        }
-        type();
-    });
-}
-
-// 6. إرسال الرسالة (مع الحفظ)
+// 5. إرسال الرسالة + جلب عنوان ذكي
 btnDiagnose.addEventListener("click", async function() {
     var userText = problemText.value.trim();
     if (!userText) return;
@@ -132,16 +150,14 @@ btnDiagnose.addEventListener("click", async function() {
     problemText.style.height = "auto";
     var aiMsgDiv = addMessage("", "ai");
     
-    // لو دي محادثة جديدة، بنسجلها في القائمة
     if (currentChatIndex === -1) {
-        var title = userText.substring(0, 25) + (userText.length > 25 ? "..." : "");
         var dateStr = new Date().toLocaleString('ar-EG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-        
         var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
-        history.unshift({ title: title, date: dateStr, content: "" });
+        // عنوان مؤقت لحد ما الذكاء الاصطناعي يرد
+        history.unshift({ title: "جاري التلخيص...", date: dateStr, content: "", pinned: false });
         localStorage.setItem("chatHistory", JSON.stringify(history));
-        currentChatIndex = 0; // أول عنصر في القائمة
-        loadHistory(); // تحديث القائمة الجانبية
+        currentChatIndex = 0; 
+        loadHistory();
     }
 
     var aiAnswer = await askGroqAI(userText);
@@ -149,13 +165,28 @@ btnDiagnose.addEventListener("click", async function() {
     
     await typeWriter(aiMsgDiv, aiAnswer, 15);
     
-    // بعد ما الذكاء الاصطناعي يرد، بنحفظ المحتوى بالكامل
     var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
+    history.sort((a, b) => b.pinned - a.pinned);
+    
     if(history[currentChatIndex]) {
         history[currentChatIndex].content = chatContainer.innerHTML;
+        
+        // لو العنوان لسه "جاري التلخيص"، نطلب من الذكاء الاصطناعي يلخص
+        if (history[currentChatIndex].title === "جاري التلخيص...") {
+            var summaryPrompt = "لخص هذه المشكلة في 3 كلمات كحد أقصى لتكون عنوان للمحادثة، بدون أي زخرفة: " + userText;
+            var shortTitle = await askGroqAI(summaryPrompt);
+            // تنظيف النص من أي علامات تنصيص
+            history[currentChatIndex].title = shortTitle.replace(/["']/g, "").substring(0, 30);
+        }
+        
         localStorage.setItem("chatHistory", JSON.stringify(history));
+        loadHistory();
     }
 });
 
-problemText.addEventListener("input", function() { this.style.height = "auto"; this.style.height = (this.scrollHeight) + "px"; });
-problemText.addEventListener("keydown", function(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); btnDiagnose.click(); } });
+// منع القائمة من الاختفاء عند الدوس في أي مكان
+document.addEventListener("click", function(e) {
+    if (!e.target.closest('.options-btn') && !e.target.closest('.options-menu')) {
+        document.querySelectorAll(".options-menu").forEach(m => m.classList.remove("active"));
+    }
+});

@@ -48,7 +48,7 @@
         <div id="loginSection">
             <h2>تسجيل الدخول</h2>
             <button class="google-btn" onclick="signInWithGoogle()">
-                <img src="Google.png" alt="Google">
+                <img src="google.png" alt="Google">
                 المتابعة باستخدام Google
             </button>
             <div class="divider">أو</div>
@@ -113,14 +113,20 @@
         }
 
         window.signInWithGoogle = function() {
-            signInWithPopup(auth, provider).then((result) => {
-                localStorage.setItem("userName", result.user.displayName || "مستخدم");
-                window.location.href = "index.html";
-            }).catch((error) => {
-                document.getElementById("loginError").style.display = "block";
-                document.getElementById("loginError").innerText = error.message;
-            });
+    signInWithPopup(auth, provider).then((result) => {
+        localStorage.setItem("userName", result.user.displayName || "مستخدم");
+        // السطر ده هو اللي هيجيب صورة جوجل بتاعتك
+        if (result.user.photoURL) {
+            localStorage.setItem("userAvatar", result.user.photoURL);
+        } else {
+            localStorage.removeItem("userAvatar");
         }
+        window.location.href = "index.html";
+    }).catch((error) => {
+        document.getElementById("loginError").style.display = "block";
+        document.getElementById("loginError").innerText = error.message;
+    });
+}
 
         window.signupEmail = function() {
             const name = document.getElementById("signupName").value;
