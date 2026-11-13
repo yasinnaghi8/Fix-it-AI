@@ -27,7 +27,6 @@ document.addEventListener("DOMContentLoaded", function() {
     if (nameSpan) nameSpan.textContent = savedName;
     if (avatarImg && savedAvatar) avatarImg.src = savedAvatar;
     
-    // إنشاء زرار فتح السايدبار (بيظهر بس لما السايدبار يتقفل)
     openBtn = document.createElement("button");
     openBtn.id = "openSidebarBtn";
     openBtn.className = "icon-btn";
@@ -269,7 +268,10 @@ btnDiagnose.addEventListener("click", async function() {
         loadHistory();
     }
 
-    var aiAnswer = await askGroqAI(userText);
+    // التعديل الجديد هنا عشان نظبط شكل الرد
+    var strictPrompt = userText + "\n\n(ملاحظة للنظام: رد باختصار شديد، بالعامية المصرية، استخدم نقط واضحة، وممنوع استخدام الجداول نهائياً).";
+    var aiAnswer = await askGroqAI(strictPrompt);
+    
     if (!aiAnswer) { aiAnswer = "حدث خطأ، تأكد من الاتصال."; }
     
     await typeWriter(aiMsgDiv, aiAnswer, 15);
