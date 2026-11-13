@@ -269,7 +269,8 @@ function confirmDelete() {
     }
 }
 
-function addMessage(text, type) {
+// دالة إضافة رسالة (بقت تستقبل صورة اختيارية)
+function addMessage(text, type, imageSrc = null) {
     if (!isChatStarted) { 
         welcomeLogo.classList.add("started"); 
         sidebar.classList.add("collapsed"); 
@@ -279,10 +280,26 @@ function addMessage(text, type) {
     var msgDiv = document.createElement("div");
     msgDiv.classList.add("message", type === "user" ? "user-msg" : "ai-msg");
     
-    if(type === "ai") {
-        msgDiv.innerHTML = marked.parse(text);
-    } else {
-        msgDiv.textContent = text;
+    // لو فيه صورة، نضيفها الأول
+    if (imageSrc) {
+        var img = document.createElement("img");
+        img.src = imageSrc;
+        img.style.maxWidth = "100%";
+        img.style.borderRadius = "8px";
+        img.style.marginBottom = "8px";
+        img.style.display = "block";
+        msgDiv.appendChild(img);
+    }
+
+    // بعدين نضيف النص
+    if (text) {
+        var textDiv = document.createElement("div");
+        if(type === "ai") {
+            textDiv.innerHTML = marked.parse(text);
+        } else {
+            textDiv.textContent = text;
+        }
+        msgDiv.appendChild(textDiv);
     }
 
     chatContainer.appendChild(msgDiv);
@@ -290,22 +307,12 @@ function addMessage(text, type) {
     return msgDiv;
 }
 
-// دالة الكتابة المنظمة
 function typeWriter(element, text, speed = 10) {
-    element.innerHTML = ""; 
-    element.classList.add("typing"); 
-    let i = 0;
-    let currentText = "";
-    
+    element.innerHTML = ""; element.classList.add("typing"); let i = 0;
     return new Promise(function(resolve) {
         function type() {
             if (i < text.length) {
-                currentText += text.charAt(i); 
-                i++;
-                
-                // بنحول النص لـ Markdown أثناء الكتابة عشان يبان منظم
-                element.innerHTML = marked.parse(currentText);
-                
+                element.textContent += text.charAt(i); i++;
                 var isBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 50;
                 if (isBottom) { chatContainer.scrollTop = chatContainer.scrollHeight; }
                 setTimeout(type, speed);
@@ -345,7 +352,8 @@ btnDiagnose.addEventListener("click", async function() {
         finalMessage = "شوف الصورة دي وقولي المشكلة إيه؟";
     }
 
-    addMessage(finalMessage, "user"); 
+    // نضيف الرسالة ومعاها الصورة
+    addMessage(finalMessage, "user", imageDataUrl); 
     problemText.value = ""; 
     problemText.style.height = "auto";
     

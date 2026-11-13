@@ -29,11 +29,11 @@ def ask():
     }
 
     if image_data:
-        # استخدام موديل الصور
+        # استخدام موديل الصور الرسمي من Groq
         body = {
-            "model": "llama-3.2-11b-vision-preview", 
+            "model": "meta-llama/llama-4-scout-17b-16e-instruct",
             "messages": [
-                {"role": "system", "content": prompt},
+                {"role": "system", "content": prompt}, # رسالة system كنص عادي
                 {
                     "role": "user",
                     "content": [
@@ -44,7 +44,7 @@ def ask():
             ]
         }
     else:
-        # استخدام موديل النصوص (اللي كان شغال)
+        # استخدام موديل النصوص العادي
         body = {
             "model": "openai/gpt-oss-20b",
             "messages": [
