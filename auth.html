@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تسجيل الدخول - FixIt AI</title>
+    <link rel="icon" type="image/png" href="logo2.png">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { --bg-dark: #0a0a0a; --glass-bg: rgba(255, 255, 255, 0.05); --glass-border: rgba(255, 255, 255, 0.1); --accent: #00b894; }
@@ -28,6 +29,10 @@
         .input-group input { width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-border); border-radius: 10px; color: white; outline: none; transition: 0.3s; }
         .input-group input:focus { border-color: var(--accent); }
         
+        /* ستايل مقياس قوة الباسورد */
+        .strength-meter { height: 4px; width: 0%; background: red; margin-top: 8px; border-radius: 2px; transition: 0.3s; }
+        .req-text { font-size: 11px; color: #888; margin-top: 5px; }
+        
         .auth-btn { width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 15px; transition: 0.3s; }
         .auth-btn:hover { background: #00a382; }
         
@@ -44,7 +49,6 @@
     </div>
 
     <div class="auth-container">
-        <!-- تسجيل الدخول -->
         <div id="loginSection">
             <h2>تسجيل الدخول</h2>
             <button class="google-btn" onclick="signInWithGoogle()">
@@ -64,7 +68,6 @@
             <p class="error-msg" id="loginError"></p>
         </div>
 
-        <!-- إنشاء حساب -->
         <div id="signupSection" style="display: none;">
             <h2>إنشاء حساب جديد</h2>
             <div class="input-group">
@@ -74,7 +77,9 @@
                 <input type="email" id="signupEmail" placeholder="البريد الإلكتروني">
             </div>
             <div class="input-group">
-                <input type="password" id="signupPassword" placeholder="كلمة المرور (8 حروف على الأقل)">
+                <input type="password" id="signupPassword" placeholder="كلمة المرور" oninput="checkStrength()">
+                <div class="strength-meter" id="strengthMeter"></div>
+                <div class="req-text">لازم تحتوي على: 8 حروف، كابيتال، سمول، رقم، ورمز (!@#$)</div>
             </div>
             <div class="input-group">
                 <input type="password" id="signupConfirmPassword" placeholder="تأكيد كلمة المرور">
@@ -85,21 +90,19 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // ⚠️ ضع كود firebaseConfig بتاعك هنا ⚠️
         const firebaseConfig = {
-  apiKey: "AIzaSyDLxCa6EcOu_jCoB4f0wyq-gFSiudehgPM",
-  authDomain: "fixit-ai-naghi.firebaseapp.com",
-  projectId: "fixit-ai-naghi",
-  storageBucket: "fixit-ai-naghi.firebasestorage.app",
-  messagingSenderId: "581173241560",
-  appId: "1:581173241560:web:c9a2983be8245e323799ad",
-  measurementId: "G-7ZRKL2RQ6F"
-};
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -113,20 +116,36 @@
         }
 
         window.signInWithGoogle = function() {
-    signInWithPopup(auth, provider).then((result) => {
-        localStorage.setItem("userName", result.user.displayName || "مستخدم");
-        // السطر ده هو اللي هيجيب صورة جوجل بتاعتك
-        if (result.user.photoURL) {
-            localStorage.setItem("userAvatar", result.user.photoURL);
-        } else {
-            localStorage.removeItem("userAvatar");
+            signInWithPopup(auth, provider).then((result) => {
+                localStorage.setItem("userName", result.user.displayName || "مستخدم");
+                if (result.user.photoURL) {
+                    localStorage.setItem("userAvatar", result.user.photoURL);
+                } else {
+                    localStorage.removeItem("userAvatar");
+                }
+                window.location.href = "index.html";
+            }).catch((error) => {
+                document.getElementById("loginError").style.display = "block";
+                document.getElementById("loginError").innerText = error.message;
+            });
         }
-        window.location.href = "index.html";
-    }).catch((error) => {
-        document.getElementById("loginError").style.display = "block";
-        document.getElementById("loginError").innerText = error.message;
-    });
-}
+
+        window.checkStrength = function() {
+            var pwd = document.getElementById("signupPassword").value;
+            var meter = document.getElementById("strengthMeter");
+            var strength = 0;
+            
+            if (pwd.length >= 8) strength += 25;
+            if (pwd.match(/[A-Z]/)) strength += 25;
+            if (pwd.match(/[a-z]/)) strength += 25;
+            if (pwd.match(/[0-9]/) && pwd.match(/[^A-Za-z0-9]/)) strength += 25;
+
+            meter.style.width = strength + "%";
+            if (strength <= 25) meter.style.background = "red";
+            else if (strength <= 50) meter.style.background = "orange";
+            else if (strength <= 75) meter.style.background = "yellow";
+            else meter.style.background = "#00b894"; 
+        }
 
         window.signupEmail = function() {
             const name = document.getElementById("signupName").value;
@@ -160,7 +179,8 @@
                 window.location.href = "index.html";
             }).catch((error) => {
                 document.getElementById("loginError").style.display = "block";
-                document.getElementById("loginError").innerText = "الإيميل أو الباسورد غلط";
+                document.getElementById("loginError").innerText = "خطأ: " + error.code; 
+                console.log(error.code, error.message);
             });
         }
 
