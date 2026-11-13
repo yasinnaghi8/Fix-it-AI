@@ -18,7 +18,7 @@ body { background-color: var(--bg-dark); color: var(--text-main); display: flex;
 .naghi-logo { height: 20px; }
 .welcome-text { font-size: 24px; color: #e0e0e0; text-align: center; font-weight: 700; }
 .chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; max-width: 900px; margin: 0 auto; width: 100%; }
-.input-area { padding: 15px; display: flex; justify-content: center; background: linear-gradient(to top, var(--bg-dark) 50%, transparent); }
+.input-area { padding: 15px; display: flex; justify-content: center; background: linear-gradient(to top, var(--bg-dark) 50%, transparent); z-index: 10; }
 .input-box { width: 100%; max-width: 800px; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 30px; padding: 10px 15px; display: flex; align-items: flex-end; box-shadow: 0 8px 32px rgba(0,0,0,0.5); position: relative; }
 textarea { flex: 1; background: transparent; border: none; color: white; font-size: 16px; font-family: 'Cairo'; resize: none; outline: none; max-height: 120px; padding: 0 10px; }
 .send-btn { background: transparent; border: none; color: var(--accent); cursor: pointer; padding: 5px; }
@@ -53,9 +53,47 @@ textarea { flex: 1; background: transparent; border: none; color: white; font-si
 .hidden { display: none !important; }
 
 @media (max-width: 768px) {
-    .sidebar { position: relative; height: 100%; z-index: 100; width: 260px; flex-shrink: 0; transition: all 0.3s ease; }
-    .sidebar.collapsed { width: 0; padding: 0; border: none; overflow: hidden; }
-    .attachment-menu { bottom: -80px; right: 0; width: 100%; justify-content: center; }
+    .sidebar { 
+        position: fixed; 
+        right: 0; 
+        top: 0; 
+        height: 100%; 
+        z-index: 1000; 
+        transform: translateX(100%); 
+        transition: transform 0.3s ease; 
+        width: 260px; 
+        box-shadow: -5px 0 15px rgba(0,0,0,0.5); 
+        background: var(--bg-dark);
+    }
+    .sidebar:not(.collapsed) { 
+        transform: translateX(0); 
+    }
+    .sidebar.collapsed { 
+        width: 260px; 
+        display: flex; 
+        transform: translateX(100%); 
+    }
+    
+    #openSidebarBtn { 
+        display: flex !important; 
+        position: absolute; 
+        top: 15px; 
+        right: 15px; 
+        z-index: 500; 
+        background: var(--glass-bg); 
+        backdrop-filter: blur(10px); 
+        border: 1px solid var(--glass-border); 
+    }
+    
+    .attachment-menu { 
+        top: 100%;       
+        bottom: auto;    
+        margin-top: 10px; 
+        right: 50%; 
+        transform: translateX(50%); 
+        width: max-content; 
+    }
+    
     .chat-container { padding: 10px; }
     .message { font-size: 15px; }
 }

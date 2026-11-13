@@ -14,6 +14,7 @@ var attachmentMenu = document.getElementById("attachmentMenu");
 var isChatStarted = false;
 var currentChatIndex = -1;
 var chatToDeleteIndex = -1;
+var openBtn = null;
 
 document.addEventListener("DOMContentLoaded", function() {
     var savedName = localStorage.getItem("userName");
@@ -26,13 +27,28 @@ document.addEventListener("DOMContentLoaded", function() {
     if (nameSpan) nameSpan.textContent = savedName;
     if (avatarImg && savedAvatar) avatarImg.src = savedAvatar;
     
-    if (window.innerWidth < 768) sidebar.classList.add("collapsed");
+    if (window.innerWidth < 768) {
+        sidebar.classList.add("collapsed");
+        
+        openBtn = document.createElement("button");
+        openBtn.id = "openSidebarBtn";
+        openBtn.className = "icon-btn";
+        openBtn.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12h18M3 6h18M3 18h18"/></svg>`;
+        openBtn.onclick = function() { 
+            sidebar.classList.remove("collapsed"); 
+            openBtn.style.display = "none"; 
+        };
+        document.body.appendChild(openBtn);
+    }
 
     loadHistory();
 });
 
 function toggleSidebarFunc() {
-    sidebar.classList.toggle("collapsed");
+    sidebar.classList.add("collapsed");
+    if (openBtn && window.innerWidth < 768) {
+        openBtn.style.display = "flex";
+    }
 }
 
 toggleSidebar.addEventListener("click", toggleSidebarFunc);
@@ -148,7 +164,11 @@ function openChat(originalIndex) {
     welcomeLogo.classList.add("started");
     isChatStarted = true;
     currentChatIndex = originalIndex;
-    if (window.innerWidth < 768) sidebar.classList.add("collapsed");
+    
+    if (window.innerWidth < 768) {
+        sidebar.classList.add("collapsed");
+        if (openBtn) openBtn.style.display = "flex";
+    }
 }
 
 function pinChat(e, originalIndex) {
@@ -272,6 +292,10 @@ newChatBtn.addEventListener("click", function() {
     searchInput.value = ""; 
     problemText.value = ""; 
     problemText.style.height = "auto";
+    
+    if (window.innerWidth < 768 && openBtn) {
+        openBtn.style.display = "none";
+    }
 });
 
 searchBtn.addEventListener("click", function() { searchContainer.classList.toggle("hidden"); if (!searchContainer.classList.contains("hidden")) { searchInput.focus(); } });
