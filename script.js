@@ -2,29 +2,26 @@ var chatContainer = document.getElementById("chatContainer");
 var welcomeLogo = document.getElementById("welcomeLogo");
 var sidebar = document.getElementById("sidebar");
 var toggleSidebar = document.getElementById("toggleSidebar");
-var openSidebarBtn = document.getElementById("openSidebarBtn");
 var searchBtn = document.getElementById("searchBtn");
 var newChatBtn = document.getElementById("newChatBtn");
 var searchContainer = document.getElementById("searchContainer");
 var searchInput = document.getElementById("searchInput");
 var btnDiagnose = document.getElementById("btnDiagnose");
 var problemText = document.getElementById("problemText");
+var attachBtn = document.getElementById("attachBtn");
+var attachmentMenu = document.getElementById("attachmentMenu");
 
 var isChatStarted = false;
 var currentChatIndex = -1;
 var chatToDeleteIndex = -1;
 
-// 1. تشغيل أول ما الصفحة تفتح
 document.addEventListener("DOMContentLoaded", function() {
     var savedName = localStorage.getItem("userName");
     var savedAvatar = localStorage.getItem("userAvatar");
     var nameSpan = document.getElementById("sidebarUserName");
     var avatarImg = document.getElementById("userAvatar");
 
-    if (!savedName) { 
-        window.location.href = "auth.html"; 
-        return; 
-    }
+    if (!savedName) { window.location.href = "auth.html"; return; }
     
     if (nameSpan) nameSpan.textContent = savedName;
     if (avatarImg && savedAvatar) avatarImg.src = savedAvatar;
@@ -34,42 +31,54 @@ document.addEventListener("DOMContentLoaded", function() {
     loadHistory();
 });
 
-// 2. التحكم في السايدبار
-toggleSidebar.addEventListener("click", function() { sidebar.classList.add("collapsed"); });
-openSidebarBtn.addEventListener("click", function() { sidebar.classList.remove("collapsed"); });
+function toggleSidebarFunc() {
+    sidebar.classList.toggle("collapsed");
+}
 
-// 3. تسجيل الخروج
+toggleSidebar.addEventListener("click", toggleSidebarFunc);
+
 function logout() {
     localStorage.removeItem("userName");
     localStorage.removeItem("userAvatar");
     window.location.href = "auth.html";
 }
 
-// ==========================================
-// 4. دوال عرض المحادثات (المثبتة والعادية)
-// ==========================================
+attachBtn.addEventListener("click", function(e) {
+    e.stopPropagation();
+    attachmentMenu.classList.toggle("active");
+});
+
+document.addEventListener("click", function(e) {
+    if (!attachBtn.contains(e.target) && !attachmentMenu.contains(e.target)) {
+        attachmentMenu.classList.remove("active");
+    }
+});
+
+function triggerInput(type) {
+    attachmentMenu.classList.remove("active");
+    if (type === 'camera') document.getElementById('cameraInput').click();
+    if (type === 'image') document.getElementById('imageInput').click();
+    if (type === 'file') document.getElementById('fileInput').click();
+}
+
 function loadHistory() {
     var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
     var pinnedContainer = document.getElementById("pinnedChatHistory");
     var regularContainer = document.getElementById("chatHistory");
     var pinnedSection = document.getElementById("pinnedChatsSection");
     
-    // تنظيف القوائم قبل الرسم
     pinnedContainer.innerHTML = "";
     regularContainer.innerHTML = "";
     
-    // فصل المحادثات
     var pinnedChats = history.filter(chat => chat.pinned);
     var regularChats = history.filter(chat => !chat.pinned);
 
-    // إظهار أو إخفاء قسم المثبتين
     if (pinnedChats.length > 0) {
         pinnedSection.style.display = "flex";
     } else {
         pinnedSection.style.display = "none";
     }
 
-    // دالة مساعدة لرسم المحادثة
     function renderChatItem(chat, originalIndex) {
         var div = document.createElement("div");
         div.className = "chat-item-container";
@@ -95,11 +104,10 @@ function loadHistory() {
 
         var content = document.createElement("div");
         content.className = "chat-item-content";
-        var pinIcon = chat.pinned ? '📌 ' : '';
         
         content.innerHTML = `
             <div class="chat-item-date">${chat.date}</div>
-            <div class="chat-item-title">${pinIcon}${chat.title}</div>
+            <div class="chat-item-title">${chat.title}</div>
         `;
         content.onclick = function() { openChat(originalIndex); };
 
@@ -109,13 +117,11 @@ function loadHistory() {
         return div;
     }
 
-    // رسم المحادثات المثبتة
     pinnedChats.forEach(chat => {
         var idx = history.findIndex(c => c.date === chat.date && c.title === chat.title);
         pinnedContainer.appendChild(renderChatItem(chat, idx));
     });
     
-    // رسم المحادثات العادية
     regularChats.forEach(chat => {
         var idx = history.findIndex(c => c.date === chat.date && c.title === chat.title);
         regularContainer.appendChild(renderChatItem(chat, idx));
@@ -131,6 +137,14 @@ function toggleMenu(e, index) {
 function openChat(originalIndex) {
     var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
     chatContainer.innerHTML = history[originalIndex].content;
+    
+    var aiMsgs = chatContainer.querySelectorAll('.ai-msg');
+    aiMsgs.forEach(msg => {
+        if(!msg.querySelector('p') && msg.textContent.length > 0) {
+            msg.innerHTML = marked.parse(msg.textContent);
+        }
+    });
+
     welcomeLogo.classList.add("started");
     isChatStarted = true;
     currentChatIndex = originalIndex;
@@ -167,9 +181,6 @@ function confirmDelete() {
     }
 }
 
-// ==========================================
-// 5. دوال الشات والرسائل
-// ==========================================
 function addMessage(text, type) {
     if (!isChatStarted) { 
         welcomeLogo.classList.add("started"); 
@@ -178,7 +189,13 @@ function addMessage(text, type) {
     }
     var msgDiv = document.createElement("div");
     msgDiv.classList.add("message", type === "user" ? "user-msg" : "ai-msg");
-    msgDiv.textContent = text;
+    
+    if(type === "ai") {
+        msgDiv.innerHTML = marked.parse(text);
+    } else {
+        msgDiv.textContent = text;
+    }
+
     chatContainer.appendChild(msgDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
     return msgDiv;
@@ -189,17 +206,20 @@ function typeWriter(element, text, speed = 10) {
     return new Promise(function(resolve) {
         function type() {
             if (i < text.length) {
-                element.innerHTML += text.charAt(i); i++;
+                element.textContent += text.charAt(i); i++;
                 var isBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 50;
                 if (isBottom) { chatContainer.scrollTop = chatContainer.scrollHeight; }
                 setTimeout(type, speed);
-            } else { element.classList.remove("typing"); resolve(); }
+            } else { 
+                element.classList.remove("typing"); 
+                element.innerHTML = marked.parse(text);
+                resolve(); 
+            }
         }
         type();
     });
 }
 
-// زرار الإرسال
 btnDiagnose.addEventListener("click", async function() {
     var userText = problemText.value.trim();
     if (!userText) return;
@@ -209,7 +229,6 @@ btnDiagnose.addEventListener("click", async function() {
     problemText.style.height = "auto";
     var aiMsgDiv = addMessage("", "ai");
     
-    // لو محادثة جديدة، نضيفها للـ LocalStorage
     if (currentChatIndex === -1) {
         var dateStr = new Date().toLocaleString('ar-EG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
         var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
@@ -229,7 +248,6 @@ btnDiagnose.addEventListener("click", async function() {
     if(history[currentChatIndex]) {
         history[currentChatIndex].content = chatContainer.innerHTML;
         
-        // جلب عنوان ذكي من الذكاء الاصطناعي
         if (history[currentChatIndex].title === "جاري التلخيص...") {
             var summaryPrompt = "لخص هذه المشكلة في 3 كلمات كحد أقصى لتكون عنوان للمحادثة، بدون أي زخرفة: " + userText;
             var shortTitle = await askGroqAI(summaryPrompt);
@@ -241,11 +259,9 @@ btnDiagnose.addEventListener("click", async function() {
     }
 });
 
-// زرار الإنتر والإدخال
 problemText.addEventListener("input", function() { this.style.height = "auto"; this.style.height = (this.scrollHeight) + "px"; });
 problemText.addEventListener("keydown", function(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); btnDiagnose.click(); } });
 
-// زرار محادثة جديدة
 newChatBtn.addEventListener("click", function() {
     chatContainer.innerHTML = ""; 
     welcomeLogo.classList.remove("started"); 
@@ -258,7 +274,6 @@ newChatBtn.addEventListener("click", function() {
     problemText.style.height = "auto";
 });
 
-// البحث
 searchBtn.addEventListener("click", function() { searchContainer.classList.toggle("hidden"); if (!searchContainer.classList.contains("hidden")) { searchInput.focus(); } });
 searchInput.addEventListener("input", function(e) {
     var term = e.target.value.toLowerCase();
@@ -266,7 +281,6 @@ searchInput.addEventListener("input", function(e) {
     messages.forEach(function(msg) { if (msg.textContent.toLowerCase().includes(term)) { msg.style.display = "block"; } else { msg.style.display = "none"; } });
 });
 
-// منع القائمة من الاختفاء عند الدوس في أي مكان
 document.addEventListener("click", function(e) {
     if (!e.target.closest('.options-btn') && !e.target.closest('.options-menu')) {
         document.querySelectorAll(".options-menu").forEach(m => m.classList.remove("active"));
