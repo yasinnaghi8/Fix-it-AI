@@ -10,11 +10,13 @@ var btnDiagnose = document.getElementById("btnDiagnose");
 var problemText = document.getElementById("problemText");
 var attachBtn = document.getElementById("attachBtn");
 var attachmentMenu = document.getElementById("attachmentMenu");
+var previewContainer = document.getElementById("previewContainer");
 
 var isChatStarted = false;
 var currentChatIndex = -1;
 var chatToDeleteIndex = -1;
 var openBtn = null;
+var attachedFiles = []; 
 
 document.addEventListener("DOMContentLoaded", function() {
     var savedName = localStorage.getItem("userName");
@@ -84,6 +86,63 @@ function triggerInput(type) {
     if (type === 'camera') document.getElementById('cameraInput').click();
     if (type === 'image') document.getElementById('imageInput').click();
     if (type === 'file') document.getElementById('fileInput').click();
+}
+
+function handleFileSelect(event) {
+    var files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        var fileId = 'file-' + Date.now() + '-' + i;
+        
+        attachedFiles.push({ id: fileId, file: file });
+
+        var previewDiv = document.createElement("div");
+        previewDiv.className = "preview-item";
+        previewDiv.id = fileId;
+
+        if (file.type.startsWith("image/")) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById(fileId).innerHTML = `<img src="${e.target.result}">
+                <div class="loading-circle" id="loader-${fileId}" style="display: block;"></div>
+                <button class="cancel-btn" onclick="removeFile('${fileId}')">×</button>`;
+                
+                setTimeout(() => {
+                    var loader = document.getElementById("loader-" + fileId);
+                    if(loader) loader.style.display = "none";
+                }, 1500);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            var contentHTML = `<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <div class="loading-circle" id="loader-${fileId}" style="display: block;"></div>
+            <button class="cancel-btn" onclick="removeFile('${fileId}')">×</button>`;
+            previewDiv.innerHTML = contentHTML;
+            
+            setTimeout(() => {
+                var loader = document.getElementById("loader-" + fileId);
+                if(loader) loader.style.display = "none";
+            }, 1500);
+        }
+        
+        previewContainer.appendChild(previewDiv);
+    }
+    
+    event.target.value = '';
+}
+
+document.getElementById('cameraInput').addEventListener('change', handleFileSelect);
+document.getElementById('imageInput').addEventListener('change', handleFileSelect);
+document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+function removeFile(fileId) {
+    var previewDiv = document.getElementById(fileId);
+    if (previewDiv) {
+        previewDiv.remove();
+    }
+    attachedFiles = attachedFiles.filter(function(item) { return item.id !== fileId; });
 }
 
 function loadHistory() {
@@ -252,11 +311,38 @@ function typeWriter(element, text, speed = 10) {
 
 btnDiagnose.addEventListener("click", async function() {
     var userText = problemText.value.trim();
-    if (!userText) return;
+    
+    if (!userText && attachedFiles.length === 0) return;
 
-    addMessage(userText, "user"); 
+    var finalMessage = userText;
+    var imageDataUrl = null;
+
+    if (attachedFiles.length > 0) {
+        for (var i = 0; i < attachedFiles.length; i++) {
+            if (attachedFiles[i].file.type.startsWith("image/")) {
+                var file = attachedFiles[i].file;
+                imageDataUrl = await new Promise((resolve) => {
+                    var reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(file);
+                });
+                break;
+            }
+        }
+    }
+
+    // إضافة نص بسيط يوضح إن فيه صورة لو المستخدم مش كاتب حاجة
+    if (!finalMessage && imageDataUrl) {
+        finalMessage = "شوف الصورة دي وقولي المشكلة إيه؟";
+    }
+
+    addMessage(finalMessage, "user"); 
     problemText.value = ""; 
     problemText.style.height = "auto";
+    
+    previewContainer.innerHTML = "";
+    attachedFiles = [];
+
     var aiMsgDiv = addMessage("", "ai");
     
     if (currentChatIndex === -1) {
@@ -268,9 +354,8 @@ btnDiagnose.addEventListener("click", async function() {
         loadHistory();
     }
 
-    // التعديل الجديد هنا عشان نظبط شكل الرد
-    var strictPrompt = userText + "\n\n(ملاحظة للنظام: رد باختصار شديد، بالعامية المصرية، استخدم نقط واضحة، وممنوع استخدام الجداول نهائياً).";
-    var aiAnswer = await askGroqAI(strictPrompt);
+    // بنبعت النص والصورة (لو موجودة) للسيرفر
+    var aiAnswer = await askGroqAI(finalMessage, imageDataUrl);
     
     if (!aiAnswer) { aiAnswer = "حدث خطأ، تأكد من الاتصال."; }
     
@@ -282,7 +367,7 @@ btnDiagnose.addEventListener("click", async function() {
         history[currentChatIndex].content = chatContainer.innerHTML;
         
         if (history[currentChatIndex].title === "جاري التلخيص...") {
-            var summaryPrompt = "لخص هذه المشكلة في 3 كلمات كحد أقصى لتكون عنوان للمحادثة، بدون أي زخرفة: " + userText;
+            var summaryPrompt = "لخص هذه المشكلة في 3 كلمات كحد أقصى لتكون عنوان للمحادثة، بدون أي زخرفة: " + (userText || "مرفقات");
             var shortTitle = await askGroqAI(summaryPrompt);
             history[currentChatIndex].title = shortTitle.replace(/["']/g, "").substring(0, 30);
         }
@@ -305,6 +390,8 @@ newChatBtn.addEventListener("click", function() {
     searchInput.value = ""; 
     problemText.value = ""; 
     problemText.style.height = "auto";
+    previewContainer.innerHTML = "";
+    attachedFiles = [];
     
     if (openBtn) openBtn.style.display = "none";
 });
