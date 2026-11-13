@@ -52,6 +52,7 @@ textarea { flex: 1; background: transparent; border: none; color: white; font-si
 .icon-btn { background: transparent; border: 1px solid var(--glass-border); color: white; padding: 8px; border-radius: 10px; cursor: pointer; display: flex; }
 .hidden { display: none !important; }
 
+/* الموبايل */
 @media (max-width: 768px) {
     .sidebar { 
         position: fixed; 
@@ -86,11 +87,11 @@ textarea { flex: 1; background: transparent; border: none; color: white; font-si
     }
     
     .attachment-menu { 
-        top: 100%;       
-        bottom: auto;    
-        margin-top: 10px; 
-        right: 50%; 
-        transform: translateX(50%); 
+        top: auto;       
+        bottom: 100%;    
+        margin-bottom: 10px; 
+        right: 10px; 
+        transform: none; 
         width: max-content; 
     }
     

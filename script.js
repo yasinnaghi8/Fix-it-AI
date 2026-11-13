@@ -27,27 +27,37 @@ document.addEventListener("DOMContentLoaded", function() {
     if (nameSpan) nameSpan.textContent = savedName;
     if (avatarImg && savedAvatar) avatarImg.src = savedAvatar;
     
+    // إنشاء زرار فتح السايدبار (بيظهر بس لما السايدبار يتقفل)
+    openBtn = document.createElement("button");
+    openBtn.id = "openSidebarBtn";
+    openBtn.className = "icon-btn";
+    openBtn.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12h18M3 6h18M3 18h18"/></svg>`;
+    openBtn.style.position = "absolute";
+    openBtn.style.top = "15px";
+    openBtn.style.right = "15px";
+    openBtn.style.zIndex = "500";
+    openBtn.style.display = "none"; 
+    document.body.appendChild(openBtn);
+    
+    openBtn.onclick = function() { 
+        sidebar.classList.remove("collapsed"); 
+        openBtn.style.display = "none"; 
+    };
+
     if (window.innerWidth < 768) {
         sidebar.classList.add("collapsed");
-        
-        openBtn = document.createElement("button");
-        openBtn.id = "openSidebarBtn";
-        openBtn.className = "icon-btn";
-        openBtn.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12h18M3 6h18M3 18h18"/></svg>`;
-        openBtn.onclick = function() { 
-            sidebar.classList.remove("collapsed"); 
-            openBtn.style.display = "none"; 
-        };
-        document.body.appendChild(openBtn);
+        openBtn.style.display = "flex";
     }
 
     loadHistory();
 });
 
 function toggleSidebarFunc() {
-    sidebar.classList.add("collapsed");
-    if (openBtn && window.innerWidth < 768) {
-        openBtn.style.display = "flex";
+    sidebar.classList.toggle("collapsed");
+    if (sidebar.classList.contains("collapsed")) {
+        if (openBtn) openBtn.style.display = "flex";
+    } else {
+        if (openBtn) openBtn.style.display = "none";
     }
 }
 
@@ -205,6 +215,7 @@ function addMessage(text, type) {
     if (!isChatStarted) { 
         welcomeLogo.classList.add("started"); 
         sidebar.classList.add("collapsed"); 
+        if(openBtn) openBtn.style.display = "flex";
         isChatStarted = true; 
     }
     var msgDiv = document.createElement("div");
@@ -293,9 +304,7 @@ newChatBtn.addEventListener("click", function() {
     problemText.value = ""; 
     problemText.style.height = "auto";
     
-    if (window.innerWidth < 768 && openBtn) {
-        openBtn.style.display = "none";
-    }
+    if (openBtn) openBtn.style.display = "none";
 });
 
 searchBtn.addEventListener("click", function() { searchContainer.classList.toggle("hidden"); if (!searchContainer.classList.contains("hidden")) { searchInput.focus(); } });
