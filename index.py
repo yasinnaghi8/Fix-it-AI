@@ -15,23 +15,23 @@ def ask():
 
     data = request.get_json(silent=True) or {}
     msg = data.get('message', '').strip()
-    image_data = data.get('image') # هنستقبل الصورة هنا لو موجودة
+    image_data = data.get('image')
 
     if not msg and not image_data:
         return jsonify({"error": "Message or image is required"}), 400
 
-    prompt = "أنت صنايعي مصري شاطر. مختص بس في أعطال البيت. رد بالعامية وادي خطوات عملية."
-    
+    prompt = "أنت صنايعي مصري شاطر. مختص بس في أعطال البيت. رد بالعامية وادي خطوات عملية. لو فيه صورة، حلل العطل اللي فيها."
+
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
 
-    # لو فيه صورة، هنستخدم موديل بيشوف الصور
     if image_data:
+        # استخدام موديل الصور
         body = {
-            "model": "llama-3.2-11b-vision-preview", # موديل قوي لقراءة الصور
+            "model": "llama-3.2-11b-vision-preview", 
             "messages": [
                 {"role": "system", "content": prompt},
                 {
@@ -44,7 +44,7 @@ def ask():
             ]
         }
     else:
-        # لو مفيش صورة، نستخدم موديل النصوص العادي (اللي كان شغال)
+        # استخدام موديل النصوص (اللي كان شغال)
         body = {
             "model": "openai/gpt-oss-20b",
             "messages": [

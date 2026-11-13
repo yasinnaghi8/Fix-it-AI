@@ -290,12 +290,22 @@ function addMessage(text, type) {
     return msgDiv;
 }
 
+// دالة الكتابة المنظمة
 function typeWriter(element, text, speed = 10) {
-    element.innerHTML = ""; element.classList.add("typing"); let i = 0;
+    element.innerHTML = ""; 
+    element.classList.add("typing"); 
+    let i = 0;
+    let currentText = "";
+    
     return new Promise(function(resolve) {
         function type() {
             if (i < text.length) {
-                element.textContent += text.charAt(i); i++;
+                currentText += text.charAt(i); 
+                i++;
+                
+                // بنحول النص لـ Markdown أثناء الكتابة عشان يبان منظم
+                element.innerHTML = marked.parse(currentText);
+                
                 var isBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 50;
                 if (isBottom) { chatContainer.scrollTop = chatContainer.scrollHeight; }
                 setTimeout(type, speed);
@@ -331,7 +341,6 @@ btnDiagnose.addEventListener("click", async function() {
         }
     }
 
-    // إضافة نص بسيط يوضح إن فيه صورة لو المستخدم مش كاتب حاجة
     if (!finalMessage && imageDataUrl) {
         finalMessage = "شوف الصورة دي وقولي المشكلة إيه؟";
     }
@@ -354,12 +363,11 @@ btnDiagnose.addEventListener("click", async function() {
         loadHistory();
     }
 
-    // بنبعت النص والصورة (لو موجودة) للسيرفر
     var aiAnswer = await askGroqAI(finalMessage, imageDataUrl);
     
     if (!aiAnswer) { aiAnswer = "حدث خطأ، تأكد من الاتصال."; }
     
-    await typeWriter(aiMsgDiv, aiAnswer, 15);
+    await typeWriter(aiMsgDiv, aiAnswer, 10);
     
     var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
     
