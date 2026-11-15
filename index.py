@@ -29,7 +29,7 @@ def ask():
     }
 
     if image_data:
-        # الموديل الصحيح اللي بيدعم الصور في Groq
+        # الموديل الجديد اللي بيشوف الصور
         body = {
             "model": "qwen/qwen3.8-27b",
             "messages": [
