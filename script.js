@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import './groq-ai.js'; // السطر ده اللي بيربط الملفين ببعض
 
 const firebaseConfig = {
     apiKey: "AIzaSyDLxCa6EcOu_jCoB4f0wyq-gFSiudehgPM",
@@ -16,6 +15,38 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// دالة الاتصال بالذكاء الاصطناعي (كانت في groq-ai.js)
+async function askGroqAI(userInput, imageBase64 = null) {
+    try {
+        var payload = { message: userInput };
+        if (imageBase64) {
+            payload.image = imageBase64;
+        }
+
+        var res = await fetch("/ask", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        var textData = await res.text();
+        
+        try {
+            var data = JSON.parse(textData);
+            if (data.choices && data.choices.length > 0) {
+                return data.choices[0].message.content;
+            } else {
+                return "مشكلة في السيرفر: " + JSON.stringify(data);
+            }
+        } catch (e) {
+            return "السيرفر رجع خطأ: " + textData.substring(0, 100);
+        }
+        
+    } catch (err) {
+        return "مشكلة في الاتصال: " + err.message;
+    }
+}
 
 var chatContainer = document.getElementById("chatContainer");
 var welcomeLogo = document.getElementById("welcomeLogo");
@@ -86,7 +117,7 @@ function toggleSidebarFunc() {
 toggleSidebar.addEventListener("click", toggleSidebarFunc);
 
 window.logout = function() {
-    auth.signOut().then(() => {
+    signOut(auth).then(() => {
         localStorage.removeItem("userName");
         localStorage.removeItem("userAvatar");
         window.location.href = "auth.html";
