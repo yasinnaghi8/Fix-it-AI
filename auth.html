@@ -29,7 +29,6 @@
         .input-group input { width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-border); border-radius: 10px; color: white; outline: none; transition: 0.3s; }
         .input-group input:focus { border-color: var(--accent); }
         
-        /* ستايل مقياس قوة الباسورد */
         .strength-meter { height: 4px; width: 0%; background: red; margin-top: 8px; border-radius: 2px; transition: 0.3s; }
         .req-text { font-size: 11px; color: #888; margin-top: 5px; }
         
@@ -93,20 +92,22 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        // استيراد قاعدة البيانات
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // ⚠️ ضع كود firebaseConfig بتاعك هنا ⚠️
         const firebaseConfig = {
-  apiKey: "AIzaSyDLxCa6EcOu_jCoB4f0wyq-gFSiudehgPM",
-  authDomain: "fixit-ai-naghi.firebaseapp.com",
-  projectId: "fixit-ai-naghi",
-  storageBucket: "fixit-ai-naghi.firebasestorage.app",
-  messagingSenderId: "581173241560",
-  appId: "1:581173241560:web:c9a2983be8245e323799ad",
-  measurementId: "G-7ZRKL2RQ6F"
-};
+            apiKey: "AIzaSyDLxCa6EcOu_jCoB4f0wyq-gFSiudehgPM",
+            authDomain: "fixit-ai-naghi.firebaseapp.com",
+            projectId: "fixit-ai-naghi",
+            storageBucket: "fixit-ai-naghi.firebasestorage.app",
+            messagingSenderId: "581173241560",
+            appId: "1:581173241560:web:c9a2983be8245e323799ad",
+            measurementId: "G-7ZRKL2RQ6F"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app); // تفعيل قاعدة البيانات
         const provider = new GoogleAuthProvider();
 
         window.toggleForms = function() {
@@ -119,6 +120,7 @@
         window.signInWithGoogle = function() {
             signInWithPopup(auth, provider).then((result) => {
                 localStorage.setItem("userName", result.user.displayName || "مستخدم");
+                localStorage.setItem("userUID", result.user.uid); // بنحفظ الـ ID بتاع المستخدم
                 if (result.user.photoURL) {
                     localStorage.setItem("userAvatar", result.user.photoURL);
                 } else {
@@ -163,6 +165,7 @@
             createUserWithEmailAndPassword(auth, email, password).then((userCredential) => {
                 updateProfile(userCredential.user, { displayName: name }).then(() => {
                     localStorage.setItem("userName", name);
+                    localStorage.setItem("userUID", userCredential.user.uid); // بنحفظ الـ ID
                     window.location.href = "index.html";
                 });
             }).catch((error) => {
@@ -177,6 +180,7 @@
 
             signInWithEmailAndPassword(auth, email, password).then((userCredential) => {
                 localStorage.setItem("userName", userCredential.user.displayName || "مستخدم");
+                localStorage.setItem("userUID", userCredential.user.uid); // بنحفظ الـ ID
                 window.location.href = "index.html";
             }).catch((error) => {
                 document.getElementById("loginError").style.display = "block";

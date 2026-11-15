@@ -1,3 +1,21 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDLxCa6EcOu_jCoB4f0wyq-gFSiudehgPM",
+    authDomain: "fixit-ai-naghi.firebaseapp.com",
+    projectId: "fixit-ai-naghi",
+    storageBucket: "fixit-ai-naghi.firebasestorage.app",
+    messagingSenderId: "581173241560",
+    appId: "1:581173241560:web:c9a2983be8245e323799ad",
+    measurementId: "G-7ZRKL2RQ6F"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
 var chatContainer = document.getElementById("chatContainer");
 var welcomeLogo = document.getElementById("welcomeLogo");
 var sidebar = document.getElementById("sidebar");
@@ -17,40 +35,43 @@ var currentChatIndex = -1;
 var chatToDeleteIndex = -1;
 var openBtn = null;
 var attachedFiles = []; 
+var currentUserUID = null; // عشان نحفظ الـ ID بتاع المستخدم
+var userChats = []; // هنحفظ المحادثات هنا بعد ما نجيبها من Firebase
 
+// تشغيل أول ما الصفحة تفتح
 document.addEventListener("DOMContentLoaded", function() {
-    var savedName = localStorage.getItem("userName");
-    var savedAvatar = localStorage.getItem("userAvatar");
-    var nameSpan = document.getElementById("sidebarUserName");
-    var avatarImg = document.getElementById("userAvatar");
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserUID = user.uid;
+            document.getElementById("sidebarUserName").textContent = user.displayName || "مستخدم";
+            if (user.photoURL) document.getElementById("userAvatar").src = user.photoURL;
+            
+            openBtn = document.createElement("button");
+            openBtn.id = "openSidebarBtn";
+            openBtn.className = "icon-btn";
+            openBtn.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12h18M3 6h18M3 18h18"/></svg>`;
+            openBtn.style.position = "absolute";
+            openBtn.style.top = "15px";
+            openBtn.style.right = "15px";
+            openBtn.style.zIndex = "500";
+            openBtn.style.display = "none"; 
+            document.body.appendChild(openBtn);
+            
+            openBtn.onclick = function() { 
+                sidebar.classList.remove("collapsed"); 
+                openBtn.style.display = "none"; 
+            };
 
-    if (!savedName) { window.location.href = "auth.html"; return; }
-    
-    if (nameSpan) nameSpan.textContent = savedName;
-    if (avatarImg && savedAvatar) avatarImg.src = savedAvatar;
-    
-    openBtn = document.createElement("button");
-    openBtn.id = "openSidebarBtn";
-    openBtn.className = "icon-btn";
-    openBtn.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12h18M3 6h18M3 18h18"/></svg>`;
-    openBtn.style.position = "absolute";
-    openBtn.style.top = "15px";
-    openBtn.style.right = "15px";
-    openBtn.style.zIndex = "500";
-    openBtn.style.display = "none"; 
-    document.body.appendChild(openBtn);
-    
-    openBtn.onclick = function() { 
-        sidebar.classList.remove("collapsed"); 
-        openBtn.style.display = "none"; 
-    };
+            if (window.innerWidth < 768) {
+                sidebar.classList.add("collapsed");
+                openBtn.style.display = "flex";
+            }
 
-    if (window.innerWidth < 768) {
-        sidebar.classList.add("collapsed");
-        openBtn.style.display = "flex";
-    }
-
-    loadHistory();
+            loadHistory(); // بنجيب المحادثات من Firebase
+        } else {
+            window.location.href = "auth.html"; // لو مفيش مستخدم يرجع للدخول
+        }
+    });
 });
 
 function toggleSidebarFunc() {
@@ -65,9 +86,11 @@ function toggleSidebarFunc() {
 toggleSidebar.addEventListener("click", toggleSidebarFunc);
 
 function logout() {
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userAvatar");
-    window.location.href = "auth.html";
+    auth.signOut().then(() => {
+        localStorage.removeItem("userName");
+        localStorage.removeItem("userAvatar");
+        window.location.href = "auth.html";
+    });
 }
 
 attachBtn.addEventListener("click", function(e) {
@@ -145,8 +168,29 @@ function removeFile(fileId) {
     attachedFiles = attachedFiles.filter(function(item) { return item.id !== fileId; });
 }
 
-function loadHistory() {
-    var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
+// دالة جلب المحادثات من Firebase
+async function loadHistory() {
+    try {
+        const chatsRef = collection(db, "users", currentUserUID, "chats");
+        const q = query(chatsRef, orderBy("timestamp", "desc"));
+        const querySnapshot = await getDocs(q);
+        
+        userChats = [];
+        querySnapshot.forEach((doc) => {
+            userChats.push({ id: doc.id, ...doc.data() });
+        });
+        
+        renderHistory();
+    } catch (error) {
+        console.error("Error loading history: ", error);
+        // لو فيه مشكلة في الصلاحيات، نرجع للطريقة القديمة مؤقتاً
+        var localHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
+        userChats = localHistory;
+        renderHistory();
+    }
+}
+
+function renderHistory() {
     var pinnedContainer = document.getElementById("pinnedChatHistory");
     var regularContainer = document.getElementById("chatHistory");
     var pinnedSection = document.getElementById("pinnedChatsSection");
@@ -154,8 +198,8 @@ function loadHistory() {
     pinnedContainer.innerHTML = "";
     regularContainer.innerHTML = "";
     
-    var pinnedChats = history.filter(chat => chat.pinned);
-    var regularChats = history.filter(chat => !chat.pinned);
+    var pinnedChats = userChats.filter(chat => chat.pinned);
+    var regularChats = userChats.filter(chat => !chat.pinned);
 
     if (pinnedChats.length > 0) {
         pinnedSection.style.display = "flex";
@@ -163,24 +207,24 @@ function loadHistory() {
         pinnedSection.style.display = "none";
     }
 
-    function renderChatItem(chat, originalIndex) {
+    function renderChatItem(chat) {
         var div = document.createElement("div");
         div.className = "chat-item-container";
         
         var optBtn = document.createElement("button");
         optBtn.className = "options-btn";
         optBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>`;
-        optBtn.onclick = function(e) { e.stopPropagation(); toggleMenu(e, originalIndex); };
+        optBtn.onclick = function(e) { e.stopPropagation(); toggleMenu(e, chat.id); };
 
         var menu = document.createElement("div");
         menu.className = "options-menu";
-        menu.id = "menu-" + originalIndex;
+        menu.id = "menu-" + chat.id;
         menu.innerHTML = `
-            <button class="opt-btn" onclick="pinChat(event, ${originalIndex})">
+            <button class="opt-btn" onclick="pinChat(event, '${chat.id}')">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="#888" stroke-width="2" fill="none"><path d="M12 17v5M9 10.76V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4.76a2 2 0 0 0 .59 1.42l1.24 1.24A1 1 0 0 1 17 15H7a1 1 0 0 1-.83-1.58l1.24-1.24A2 2 0 0 0 9 10.76Z"/></svg>
                 ${chat.pinned ? 'إلغاء التثبيت' : 'تثبيت'}
             </button>
-            <button class="opt-btn delete" onclick="askDelete(event, ${originalIndex})">
+            <button class="opt-btn delete" onclick="askDelete(event, '${chat.id}')">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="#ff4757" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                 حذف
             </button>
@@ -193,7 +237,7 @@ function loadHistory() {
             <div class="chat-item-date">${chat.date}</div>
             <div class="chat-item-title">${chat.title}</div>
         `;
-        content.onclick = function() { openChat(originalIndex); };
+        content.onclick = function() { openChat(chat); };
 
         div.appendChild(optBtn);
         div.appendChild(content);
@@ -201,27 +245,18 @@ function loadHistory() {
         return div;
     }
 
-    pinnedChats.forEach(chat => {
-        var idx = history.findIndex(c => c.date === chat.date && c.title === chat.title);
-        pinnedContainer.appendChild(renderChatItem(chat, idx));
-    });
-    
-    regularChats.forEach(chat => {
-        var idx = history.findIndex(c => c.date === chat.date && c.title === chat.title);
-        regularContainer.appendChild(renderChatItem(chat, idx));
-    });
+    pinnedChats.forEach(chat => pinnedContainer.appendChild(renderChatItem(chat)));
+    regularChats.forEach(chat => regularContainer.appendChild(renderChatItem(chat)));
 }
 
-function toggleMenu(e, index) {
+function toggleMenu(e, chatId) {
     var allMenus = document.querySelectorAll(".options-menu");
-    allMenus.forEach(m => { if(m.id !== "menu-"+index) m.classList.remove("active"); });
-    document.getElementById("menu-"+index).classList.toggle("active");
+    allMenus.forEach(m => { if(m.id !== "menu-"+chatId) m.classList.remove("active"); });
+    document.getElementById("menu-"+chatId).classList.toggle("active");
 }
 
-function openChat(originalIndex) {
-    var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
-    chatContainer.innerHTML = history[originalIndex].content;
-    
+function openChat(chat) {
+    chatContainer.innerHTML = chat.content;
     var aiMsgs = chatContainer.querySelectorAll('.ai-msg');
     aiMsgs.forEach(msg => {
         if(!msg.querySelector('p') && msg.textContent.length > 0) {
@@ -231,7 +266,7 @@ function openChat(originalIndex) {
 
     welcomeLogo.classList.add("started");
     isChatStarted = true;
-    currentChatIndex = originalIndex;
+    currentChatIndex = chat.id;
     
     if (window.innerWidth < 768) {
         sidebar.classList.add("collapsed");
@@ -239,18 +274,21 @@ function openChat(originalIndex) {
     }
 }
 
-function pinChat(e, originalIndex) {
+async function pinChat(e, chatId) {
     e.stopPropagation();
-    var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
-    history[originalIndex].pinned = !history[originalIndex].pinned;
-    localStorage.setItem("chatHistory", JSON.stringify(history));
-    loadHistory();
+    var chat = userChats.find(c => c.id === chatId);
+    if (chat) {
+        try {
+            await setDoc(doc(db, "users", currentUserUID, "chats", chatId), { pinned: !chat.pinned }, { merge: true });
+            loadHistory();
+        } catch (error) { console.error(error); }
+    }
     document.querySelectorAll(".options-menu").forEach(m => m.classList.remove("active"));
 }
 
-function askDelete(e, originalIndex) {
+function askDelete(e, chatId) {
     e.stopPropagation();
-    chatToDeleteIndex = originalIndex;
+    chatToDeleteIndex = chatId;
     document.getElementById("deleteModal").style.display = "flex";
 }
 
@@ -258,18 +296,19 @@ function closeModal() {
     document.getElementById("deleteModal").style.display = "none";
 }
 
-function confirmDelete() {
-    var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
-    history.splice(chatToDeleteIndex, 1);
-    localStorage.setItem("chatHistory", JSON.stringify(history));
+async function confirmDelete() {
+    if (chatToDeleteIndex) {
+        try {
+            await deleteDoc(doc(db, "users", currentUserUID, "chats", chatToDeleteIndex));
+            loadHistory();
+        } catch (error) { console.error(error); }
+    }
     closeModal();
-    loadHistory();
     if (currentChatIndex === chatToDeleteIndex) {
         newChatBtn.click();
     }
 }
 
-// دالة إضافة رسالة (بقت تستقبل صورة اختيارية)
 function addMessage(text, type, imageSrc = null) {
     if (!isChatStarted) { 
         welcomeLogo.classList.add("started"); 
@@ -280,7 +319,6 @@ function addMessage(text, type, imageSrc = null) {
     var msgDiv = document.createElement("div");
     msgDiv.classList.add("message", type === "user" ? "user-msg" : "ai-msg");
     
-    // لو فيه صورة، نضيفها الأول
     if (imageSrc) {
         var img = document.createElement("img");
         img.src = imageSrc;
@@ -291,7 +329,6 @@ function addMessage(text, type, imageSrc = null) {
         msgDiv.appendChild(img);
     }
 
-    // بعدين نضيف النص
     if (text) {
         var textDiv = document.createElement("div");
         if(type === "ai") {
@@ -352,7 +389,6 @@ btnDiagnose.addEventListener("click", async function() {
         finalMessage = "شوف الصورة دي وقولي المشكلة إيه؟";
     }
 
-    // نضيف الرسالة ومعاها الصورة
     addMessage(finalMessage, "user", imageDataUrl); 
     problemText.value = ""; 
     problemText.style.height = "auto";
@@ -362,13 +398,17 @@ btnDiagnose.addEventListener("click", async function() {
 
     var aiMsgDiv = addMessage("", "ai");
     
+    // لو دي محادثة جديدة، بنحفظها في Firebase
     if (currentChatIndex === -1) {
         var dateStr = new Date().toLocaleString('ar-EG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-        var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
-        history.unshift({ title: "جاري التلخيص...", date: dateStr, content: "", pinned: false });
-        localStorage.setItem("chatHistory", JSON.stringify(history));
-        currentChatIndex = 0; 
-        loadHistory();
+        var newChatId = Date.now().toString(); // بنعمل ID للمحادثة
+        var newChatData = { title: "جاري التلخيص...", date: dateStr, content: "", pinned: false, timestamp: Date.now() };
+        
+        try {
+            await setDoc(doc(db, "users", currentUserUID, "chats", newChatId), newChatData);
+            currentChatIndex = newChatId;
+            loadHistory();
+        } catch (e) { console.error(e); }
     }
 
     var aiAnswer = await askGroqAI(finalMessage, imageDataUrl);
@@ -377,19 +417,23 @@ btnDiagnose.addEventListener("click", async function() {
     
     await typeWriter(aiMsgDiv, aiAnswer, 10);
     
-    var history = JSON.parse(localStorage.getItem("chatHistory") || "[]");
-    
-    if(history[currentChatIndex]) {
-        history[currentChatIndex].content = chatContainer.innerHTML;
+    // بعد ما الذكاء الاصطناعي يرد، بنحفظ الرد في المحادثة
+    if(currentChatIndex !== -1) {
+        var currentContent = chatContainer.innerHTML;
+        var currentChat = userChats.find(c => c.id === currentChatIndex);
+        var updateData = { content: currentContent };
         
-        if (history[currentChatIndex].title === "جاري التلخيص...") {
+        // لو العنوان لسه "جاري التلخيص..."، بنجيبه من الذكاء الاصطناعي
+        if (currentChat && currentChat.title === "جاري التلخيص...") {
             var summaryPrompt = "لخص هذه المشكلة في 3 كلمات كحد أقصى لتكون عنوان للمحادثة، بدون أي زخرفة: " + (userText || "مرفقات");
             var shortTitle = await askGroqAI(summaryPrompt);
-            history[currentChatIndex].title = shortTitle.replace(/["']/g, "").substring(0, 30);
+            updateData.title = shortTitle.replace(/["']/g, "").substring(0, 30);
         }
         
-        localStorage.setItem("chatHistory", JSON.stringify(history));
-        loadHistory();
+        try {
+            await setDoc(doc(db, "users", currentUserUID, "chats", currentChatIndex), updateData, { merge: true });
+            loadHistory();
+        } catch (e) { console.error(e); }
     }
 });
 
