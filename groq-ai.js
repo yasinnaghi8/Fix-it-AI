@@ -1,8 +1,8 @@
-async function askGroqAI(userInput, imageBase64 = null) {
+export async function askGroqAI(userInput, imageBase64 = null) {
     try {
         var payload = { message: userInput };
         if (imageBase64) {
-            payload.image = imageBase64; // بنبعت الصورة
+            payload.image = imageBase64;
         }
 
         var res = await fetch("/ask", {

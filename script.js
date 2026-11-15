@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import './groq-ai.js'; // السطر ده اللي بيربط الملفين ببعض
 
 const firebaseConfig = {
     apiKey: "AIzaSyDLxCa6EcOu_jCoB4f0wyq-gFSiudehgPM",
@@ -35,10 +36,9 @@ var currentChatIndex = -1;
 var chatToDeleteIndex = -1;
 var openBtn = null;
 var attachedFiles = []; 
-var currentUserUID = null; // عشان نحفظ الـ ID بتاع المستخدم
-var userChats = []; // هنحفظ المحادثات هنا بعد ما نجيبها من Firebase
+var currentUserUID = null;
+var userChats = []; 
 
-// تشغيل أول ما الصفحة تفتح
 document.addEventListener("DOMContentLoaded", function() {
     onAuthStateChanged(auth, (user) => {
         if (user) {
@@ -67,9 +67,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 openBtn.style.display = "flex";
             }
 
-            loadHistory(); // بنجيب المحادثات من Firebase
+            loadHistory();
         } else {
-            window.location.href = "auth.html"; // لو مفيش مستخدم يرجع للدخول
+            window.location.href = "auth.html";
         }
     });
 });
@@ -85,7 +85,7 @@ function toggleSidebarFunc() {
 
 toggleSidebar.addEventListener("click", toggleSidebarFunc);
 
-function logout() {
+window.logout = function() {
     auth.signOut().then(() => {
         localStorage.removeItem("userName");
         localStorage.removeItem("userAvatar");
@@ -104,7 +104,7 @@ document.addEventListener("click", function(e) {
     }
 });
 
-function triggerInput(type) {
+window.triggerInput = function(type) {
     attachmentMenu.classList.remove("active");
     if (type === 'camera') document.getElementById('cameraInput').click();
     if (type === 'image') document.getElementById('imageInput').click();
@@ -160,7 +160,7 @@ document.getElementById('cameraInput').addEventListener('change', handleFileSele
 document.getElementById('imageInput').addEventListener('change', handleFileSelect);
 document.getElementById('fileInput').addEventListener('change', handleFileSelect);
 
-function removeFile(fileId) {
+window.removeFile = function(fileId) {
     var previewDiv = document.getElementById(fileId);
     if (previewDiv) {
         previewDiv.remove();
@@ -168,7 +168,6 @@ function removeFile(fileId) {
     attachedFiles = attachedFiles.filter(function(item) { return item.id !== fileId; });
 }
 
-// دالة جلب المحادثات من Firebase
 async function loadHistory() {
     try {
         const chatsRef = collection(db, "users", currentUserUID, "chats");
@@ -183,10 +182,6 @@ async function loadHistory() {
         renderHistory();
     } catch (error) {
         console.error("Error loading history: ", error);
-        // لو فيه مشكلة في الصلاحيات، نرجع للطريقة القديمة مؤقتاً
-        var localHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
-        userChats = localHistory;
-        renderHistory();
     }
 }
 
@@ -255,7 +250,7 @@ function toggleMenu(e, chatId) {
     document.getElementById("menu-"+chatId).classList.toggle("active");
 }
 
-function openChat(chat) {
+window.openChat = function(chat) {
     chatContainer.innerHTML = chat.content;
     var aiMsgs = chatContainer.querySelectorAll('.ai-msg');
     aiMsgs.forEach(msg => {
@@ -274,7 +269,7 @@ function openChat(chat) {
     }
 }
 
-async function pinChat(e, chatId) {
+window.pinChat = async function(e, chatId) {
     e.stopPropagation();
     var chat = userChats.find(c => c.id === chatId);
     if (chat) {
@@ -286,17 +281,17 @@ async function pinChat(e, chatId) {
     document.querySelectorAll(".options-menu").forEach(m => m.classList.remove("active"));
 }
 
-function askDelete(e, chatId) {
+window.askDelete = function(e, chatId) {
     e.stopPropagation();
     chatToDeleteIndex = chatId;
     document.getElementById("deleteModal").style.display = "flex";
 }
 
-function closeModal() {
+window.closeModal = function() {
     document.getElementById("deleteModal").style.display = "none";
 }
 
-async function confirmDelete() {
+window.confirmDelete = async function() {
     if (chatToDeleteIndex) {
         try {
             await deleteDoc(doc(db, "users", currentUserUID, "chats", chatToDeleteIndex));
@@ -398,10 +393,9 @@ btnDiagnose.addEventListener("click", async function() {
 
     var aiMsgDiv = addMessage("", "ai");
     
-    // لو دي محادثة جديدة، بنحفظها في Firebase
     if (currentChatIndex === -1) {
         var dateStr = new Date().toLocaleString('ar-EG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-        var newChatId = Date.now().toString(); // بنعمل ID للمحادثة
+        var newChatId = Date.now().toString();
         var newChatData = { title: "جاري التلخيص...", date: dateStr, content: "", pinned: false, timestamp: Date.now() };
         
         try {
@@ -417,13 +411,11 @@ btnDiagnose.addEventListener("click", async function() {
     
     await typeWriter(aiMsgDiv, aiAnswer, 10);
     
-    // بعد ما الذكاء الاصطناعي يرد، بنحفظ الرد في المحادثة
     if(currentChatIndex !== -1) {
         var currentContent = chatContainer.innerHTML;
         var currentChat = userChats.find(c => c.id === currentChatIndex);
         var updateData = { content: currentContent };
         
-        // لو العنوان لسه "جاري التلخيص..."، بنجيبه من الذكاء الاصطناعي
         if (currentChat && currentChat.title === "جاري التلخيص...") {
             var summaryPrompt = "لخص هذه المشكلة في 3 كلمات كحد أقصى لتكون عنوان للمحادثة، بدون أي زخرفة: " + (userText || "مرفقات");
             var shortTitle = await askGroqAI(summaryPrompt);
