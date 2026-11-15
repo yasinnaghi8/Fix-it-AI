@@ -16,13 +16,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// دالة الاتصال بالذكاء الاصطناعي (كانت في groq-ai.js)
 async function askGroqAI(userInput, imageBase64 = null) {
     try {
         var payload = { message: userInput };
-        if (imageBase64) {
-            payload.image = imageBase64;
-        }
+        if (imageBase64) { payload.image = imageBase64; }
 
         var res = await fetch("/ask", {
             method: 'POST',
@@ -61,6 +58,8 @@ var problemText = document.getElementById("problemText");
 var attachBtn = document.getElementById("attachBtn");
 var attachmentMenu = document.getElementById("attachmentMenu");
 var previewContainer = document.getElementById("previewContainer");
+var imageLightbox = document.getElementById("imageLightbox");
+var lightboxImg = document.getElementById("lightboxImg");
 
 var isChatStarted = false;
 var currentChatIndex = -1;
@@ -139,7 +138,6 @@ window.triggerInput = function(type) {
     attachmentMenu.classList.remove("active");
     if (type === 'camera') document.getElementById('cameraInput').click();
     if (type === 'image') document.getElementById('imageInput').click();
-    if (type === 'file') document.getElementById('fileInput').click();
 }
 
 function handleFileSelect(event) {
@@ -169,16 +167,6 @@ function handleFileSelect(event) {
                 }, 1500);
             };
             reader.readAsDataURL(file);
-        } else {
-            var contentHTML = `<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            <div class="loading-circle" id="loader-${fileId}" style="display: block;"></div>
-            <button class="cancel-btn" onclick="removeFile('${fileId}')">×</button>`;
-            previewDiv.innerHTML = contentHTML;
-            
-            setTimeout(() => {
-                var loader = document.getElementById("loader-" + fileId);
-                if(loader) loader.style.display = "none";
-            }, 1500);
         }
         
         previewContainer.appendChild(previewDiv);
@@ -189,7 +177,6 @@ function handleFileSelect(event) {
 
 document.getElementById('cameraInput').addEventListener('change', handleFileSelect);
 document.getElementById('imageInput').addEventListener('change', handleFileSelect);
-document.getElementById('fileInput').addEventListener('change', handleFileSelect);
 
 window.removeFile = function(fileId) {
     var previewDiv = document.getElementById(fileId);
@@ -197,6 +184,16 @@ window.removeFile = function(fileId) {
         previewDiv.remove();
     }
     attachedFiles = attachedFiles.filter(function(item) { return item.id !== fileId; });
+}
+
+window.openLightbox = function(imgSrc) {
+    lightboxImg.src = imgSrc;
+    imageLightbox.classList.add("active");
+}
+
+window.closeLightbox = function(e) {
+    if(e) e.stopPropagation();
+    imageLightbox.classList.remove("active");
 }
 
 async function loadHistory() {
@@ -348,10 +345,12 @@ function addMessage(text, type, imageSrc = null) {
     if (imageSrc) {
         var img = document.createElement("img");
         img.src = imageSrc;
-        img.style.maxWidth = "100%";
+        img.style.maxWidth = "150px"; // صورة صغيرة فوق الرسالة
         img.style.borderRadius = "8px";
         img.style.marginBottom = "8px";
         img.style.display = "block";
+        img.style.cursor = "pointer";
+        img.onclick = function() { window.openLightbox(imageSrc); };
         msgDiv.appendChild(img);
     }
 
