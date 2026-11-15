@@ -345,7 +345,7 @@ function addMessage(text, type, imageSrc = null) {
     if (imageSrc) {
         var img = document.createElement("img");
         img.src = imageSrc;
-        img.style.maxWidth = "150px"; // صورة صغيرة فوق الرسالة
+        img.style.maxWidth = "150px"; 
         img.style.borderRadius = "8px";
         img.style.marginBottom = "8px";
         img.style.display = "block";
