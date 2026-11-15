@@ -369,18 +369,27 @@ function addMessage(text, type, imageSrc = null) {
     return msgDiv;
 }
 
+// دالة الكتابة المنظمة (بتكتب النص المنظم من الأول)
 function typeWriter(element, text, speed = 10) {
-    element.innerHTML = ""; element.classList.add("typing"); let i = 0;
+    element.innerHTML = ""; 
+    element.classList.add("typing"); 
+    let i = 0;
+    let currentText = "";
+    
     return new Promise(function(resolve) {
         function type() {
             if (i < text.length) {
-                element.textContent += text.charAt(i); i++;
+                currentText += text.charAt(i); 
+                i++;
+                
+                // بنكتب النص المنظم (HTML) طول ما هو بيكتب
+                element.innerHTML = marked.parse(currentText);
+                
                 var isBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 50;
                 if (isBottom) { chatContainer.scrollTop = chatContainer.scrollHeight; }
                 setTimeout(type, speed);
             } else { 
                 element.classList.remove("typing"); 
-                element.innerHTML = marked.parse(text);
                 resolve(); 
             }
         }
@@ -435,10 +444,12 @@ btnDiagnose.addEventListener("click", async function() {
         } catch (e) { console.error(e); }
     }
 
+    // بنبعت الرسالة والصورة
     var aiAnswer = await askGroqAI(finalMessage, imageDataUrl);
     
     if (!aiAnswer) { aiAnswer = "حدث خطأ، تأكد من الاتصال."; }
     
+    // هنا بنستخدم دالة الكتابة اللي بتكتب منظم
     await typeWriter(aiMsgDiv, aiAnswer, 10);
     
     if(currentChatIndex !== -1) {
