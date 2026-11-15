@@ -20,7 +20,7 @@ def ask():
     if not msg and not image_data:
         return jsonify({"error": "Message or image is required"}), 400
 
-    prompt = "أنت صنايعي مصري شاطر. مختص بس في أعطال البيت. رد بالعامية وادي خطوات عملية. لو فيه صورة، حلل العطل اللي فيها."
+    prompt = "أنت صنايعي مصري شاطر. مختص بس في أعطال البيت. رد بالعامية وادي خطوات عملية."
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -29,7 +29,7 @@ def ask():
     }
 
     if image_data:
-        # الموديل الجديد اللي بيشوف الصور
+        # الموديل اللي بيشوف الصور
         body = {
             "model": "qwen/qwen3.8-27b",
             "messages": [
@@ -45,7 +45,7 @@ def ask():
         }
     else:
         body = {
-            "model": "openai/gpt-oss-20b",
+            "model": "openai/gpt-oss-20b", # الموديل النصي العادي
             "messages": [
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": msg}
