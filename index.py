@@ -6,51 +6,61 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
-api_key = os.environ.get("GROQ_API_KEY")
+# المفتاح ده هيجيلنا من Vercel Environment Variables
+openrouter_key = os.environ.get("OPENROUTER_API_KEY")
+groq_key = os.environ.get("GROQ_API_KEY") # لسه محتاجينه لو مفيش صورة
 
 @app.route('/ask', methods=['POST'])
 def ask():
-    if not api_key:
-        return jsonify({"error": "API Key is missing"}), 500
+    if not openrouter_key:
+        return jsonify({"error": "OpenRouter API Key is missing in Vercel"}), 500
 
     data = request.get_json(silent=True) or {}
     msg = data.get('message', '').strip()
-    image_data = data.get('image') # ده الـ Base64 اللي جاي من الموقع
+    image_data = data.get('image') # ده الـ Base64
 
     if not msg and not image_data:
         return jsonify({"error": "Message or image is required"}), 400
 
-    prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل جداً كأنك شايفها قدامك. قولي كل حاجة باينة فيها (الألوان، الخامات، أي عيوب، أي أسلاك، أي أجزاء تالفة). بعد كده ادي خطوات عملية بالعامية المصرية لحل المشكلة."
-
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
+    prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل جداً كأنك شايفها قدامك. قولي كل حاجة باينة فيها (الألوان، الخامات، أي عيوب، أي أسلاك). بعد كده ادي خطوات عملية بالعامية المصرية لحل المشكلة."
 
     if image_data:
-        # الكود ده مبني على التوثيق الرسمي لـ Groq
+        # بنستخدم OpenRouter عشان يشوف الصورة
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {openrouter_key}",
+            "HTTP-Referer": "https://fixit-ai-seven.vercel.app",
+            "X-Title": "FixIt AI",
+            "Content-Type": "application/json"
+        }
         body = {
-            "model": "qwen/qwen3.8-27b", # الموديل الرسمي الوحيد للصور
+            "model": "google/gemini-2.0-flash-exp:free", # موديل جوجل اللي بيشوف
             "messages": [
                 {"role": "system", "content": prompt},
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": msg if msg else "حلل الصورة دي بالتفصيل وقولي المشكلة إيه"},
+                        {"type": "text", "text": msg if msg else "حلل الصورة دي بالتفصيل"},
                         {
-                            "type": "image_url", 
-                            "image_url": {"url": image_data} # بنبعت الـ Base64 مباشرة
+                            "type": "image_url",
+                            "image_url": {"url": image_data}
                         }
                     ]
                 }
-            ],
-            "reasoning_effort": "high", # نخليه يفكر ويحلل الصورة بعمق
-            "temperature": 0.3 # عشان الإجابة تبقى دقيقة ومش إبداعية أوي
+            ]
         }
     else:
+        # لو مفيش صورة، بنستخدم Groq (اللي شغال في النص)
+        if not groq_key:
+            return jsonify({"error": "Groq API Key is missing"}), 500
+        
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {groq_key}",
+            "Content-Type": "application/json"
+        }
         body = {
-            "model": "openai/gpt-oss-20b", 
+            "model": "openai/gpt-oss-20b",
             "messages": [
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": msg}
