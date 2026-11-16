@@ -6,14 +6,11 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
-# المفتاح ده هو الوحيد اللي محتاجينه دلوقتي
+groq_key = os.environ.get("GROQ_API_KEY")
 openrouter_key = os.environ.get("OPENROUTER_API_KEY")
 
 @app.route('/ask', methods=['POST'])
 def ask():
-    if not openrouter_key:
-        return jsonify({"error": "OPENROUTER_API_KEY is missing in Vercel"}), 500
-
     data = request.get_json(silent=True) or {}
     msg = data.get('message', '').strip()
     image_data = data.get('image')
@@ -21,17 +18,17 @@ def ask():
     if not msg and not image_data:
         return jsonify({"error": "Message or image is required"}), 400
 
-    prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل جداً كأنك شايفها قدامك. قولي كل حاجة باينة فيها. بعد كده ادي خطوات عملية بالعامية المصرية لحل المشكلة."
+    prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل لو موجودة. رد بالعامية المصرية وادي خطوات عملية."
 
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {openrouter_key}",
-        "HTTP-Referer": "https://fixit-ai-seven.vercel.app",
-        "X-Title": "FixIt AI",
-        "Content-Type": "application/json"
-    }
-
-    if image_data:
+    # لو فيه صورة، نستخدم OpenRouter
+    if image_data and openrouter_key:
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {openrouter_key}",
+            "HTTP-Referer": "https://fixit-ai-seven.vercel.app",
+            "X-Title": "FixIt AI",
+            "Content-Type": "application/json"
+        }
         body = {
             "model": "google/gemini-2.0-flash-exp:free",
             "messages": [
@@ -39,24 +36,29 @@ def ask():
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": msg if msg else "حلل الصورة دي بالتفصيل"},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": image_data}
-                        }
+                        {"type": "text", "text": msg if msg else "حلل الصورة دي"},
+                        {"type": "image_url", "image_url": {"url": image_data}}
                     ]
                 }
             ]
         }
-    else:
-        # لو مفيش صورة، OpenRouter هيستخدم نفس الموديل للنصوص (وبيدعم اللغة العربية تمام)
+    
+    # لو مفيش صورة، نستخدم Groq
+    elif groq_key:
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {groq_key}",
+            "Content-Type": "application/json"
+        }
         body = {
-            "model": "google/gemini-2.0-flash-exp:free",
+            "model": "openai/gpt-oss-20b",
             "messages": [
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": msg}
             ]
         }
+    else:
+        return jsonify({"error": "No API keys configured"}), 500
 
     try:
         res = requests.post(url, headers=headers, json=body, timeout=60)
@@ -70,5 +72,4 @@ def health():
     return jsonify({"status": "ok"}), 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=5000)
