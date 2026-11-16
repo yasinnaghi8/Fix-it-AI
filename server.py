@@ -4,46 +4,68 @@ from flask_cors import CORS
 import requests
 
 app = Flask(__name__)
+CORS(app)
 
-# اسمح بس للدومينات بتاعتك (Vercel + Ngrok + localhost)
-CORS(app, resources={r"/*": {"origins": "*"}})  # للتجربة، بعدين حدد الدومينات
-
-# الـ Key من الـ Environment Variable (مش في الكود)
-api_key = os.environ.get("GROQ_API_KEY")
+groq_key = os.environ.get("GROQ_API_KEY")
+openrouter_key = os.environ.get("OPENROUTER_API_KEY")
 
 @app.route('/ask', methods=['POST'])
 def ask():
-    if not api_key:
-        return jsonify({"error": "GROQ_API_KEY not set"}), 500
-
     data = request.get_json(silent=True) or {}
     msg = data.get('message', '').strip()
-    if not msg:
-        return jsonify({"error": "message is required"}), 400
+    image_data = data.get('image')
 
-    prompt = "أنت صنايعي مصري شاطر. مختص بس في أعطال البيت. رد بالعامية وادي خطوات عملية."
+    if not msg and not image_data:
+        return jsonify({"error": "Message or image is required"}), 400
 
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    body = {
-        "model": "openai/gpt-oss-20b",
-        "messages": [
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": msg}
-        ]
-    }
+    prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل لو موجودة. رد بالعامية المصرية وادي خطوات عملية."
+
+    # 1. لو فيه صورة، نستخدم OpenRouter (موديل جوجل)
+    if image_data and openrouter_key:
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {openrouter_key}",
+            "HTTP-Referer": "https://fixit-ai-seven.vercel.app",
+            "X-Title": "FixIt AI",
+            "Content-Type": "application/json"
+        }
+        body = {
+            "model": "google/gemini-2.0-flash-exp:free",
+            "messages": [
+                {"role": "system", "content": prompt},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": msg if msg else "حلل الصورة دي بالتفصيل"},
+                        {"type": "image_url", "image_url": {"url": image_data}}
+                    ]
+                }
+            ]
+        }
+    
+    # 2. لو مفيش صورة، نستخدم Groq (موديل النصوص)
+    elif groq_key:
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {groq_key}",
+            "Content-Type": "application/json"
+        }
+        body = {
+            "model": "openai/gpt-oss-20b",
+            "messages": [
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": msg}
+            ]
+        }
+    else:
+        return jsonify({"error": "API keys are missing"}), 500
 
     try:
-        res = requests.post(url, headers=headers, json=body, timeout=30)
+        res = requests.post(url, headers=headers, json=body, timeout=60)
         res.raise_for_status()
         return jsonify(res.json())
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": str(e)}), 502
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e)}), 502
 
 @app.route('/health', methods=['GET'])
 def health():
