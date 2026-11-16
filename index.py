@@ -20,7 +20,7 @@ def ask():
 
     prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل لو موجودة. رد بالعامية المصرية وادي خطوات عملية."
 
-    # لو فيه صورة، نستخدم OpenRouter
+    # 1. لو فيه صورة، نستخدم OpenRouter (موديل جوجل)
     if image_data and openrouter_key:
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {
@@ -36,14 +36,14 @@ def ask():
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": msg if msg else "حلل الصورة دي"},
+                        {"type": "text", "text": msg if msg else "حلل الصورة دي بالتفصيل"},
                         {"type": "image_url", "image_url": {"url": image_data}}
                     ]
                 }
             ]
         }
     
-    # لو مفيش صورة، نستخدم Groq
+    # 2. لو مفيش صورة، نستخدم Groq (موديل النصوص)
     elif groq_key:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
@@ -58,7 +58,7 @@ def ask():
             ]
         }
     else:
-        return jsonify({"error": "No API keys configured"}), 500
+        return jsonify({"error": "API keys are missing"}), 500
 
     try:
         res = requests.post(url, headers=headers, json=body, timeout=60)
@@ -72,4 +72,5 @@ def health():
     return jsonify({"status": "ok"}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
