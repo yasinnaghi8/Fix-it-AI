@@ -15,12 +15,12 @@ def ask():
 
     data = request.get_json(silent=True) or {}
     msg = data.get('message', '').strip()
-    image_data = data.get('image')
+    image_data = data.get('image') # ده الـ Base64 اللي جاي من الموقع
 
     if not msg and not image_data:
         return jsonify({"error": "Message or image is required"}), 400
 
-    prompt = "أنت صنايعي مصري شاطر. مختص بس في أعطال البيت. رد بالعامية وادي خطوات عملية."
+    prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل جداً كأنك شايفها قدامك. قولي كل حاجة باينة فيها (الألوان، الخامات، أي عيوب، أي أسلاك، أي أجزاء تالفة). بعد كده ادي خطوات عملية بالعامية المصرية لحل المشكلة."
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -29,23 +29,28 @@ def ask():
     }
 
     if image_data:
-        # الموديل اللي بيشوف الصور
+        # الكود ده مبني على التوثيق الرسمي لـ Groq
         body = {
-            "model": "qwen/qwen3.8-27b",
+            "model": "qwen/qwen3.8-27b", # الموديل الرسمي الوحيد للصور
             "messages": [
                 {"role": "system", "content": prompt},
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": msg if msg else "حلل الصورة دي"},
-                        {"type": "image_url", "image_url": {"url": image_data}}
+                        {"type": "text", "text": msg if msg else "حلل الصورة دي بالتفصيل وقولي المشكلة إيه"},
+                        {
+                            "type": "image_url", 
+                            "image_url": {"url": image_data} # بنبعت الـ Base64 مباشرة
+                        }
                     ]
                 }
-            ]
+            ],
+            "reasoning_effort": "high", # نخليه يفكر ويحلل الصورة بعمق
+            "temperature": 0.3 # عشان الإجابة تبقى دقيقة ومش إبداعية أوي
         }
     else:
         body = {
-            "model": "openai/gpt-oss-20b", # الموديل النصي العادي
+            "model": "openai/gpt-oss-20b", 
             "messages": [
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": msg}
@@ -53,7 +58,7 @@ def ask():
         }
 
     try:
-        res = requests.post(url, headers=headers, json=body, timeout=30)
+        res = requests.post(url, headers=headers, json=body, timeout=60)
         res.raise_for_status()
         return jsonify(res.json())
     except Exception as e:
