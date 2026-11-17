@@ -60,6 +60,9 @@ var attachmentMenu = document.getElementById("attachmentMenu");
 var previewContainer = document.getElementById("previewContainer");
 var imageLightbox = document.getElementById("imageLightbox");
 var lightboxImg = document.getElementById("lightboxImg");
+var sidebarDynamicLogo = document.getElementById("sidebarDynamicLogo");
+var mainCenterLogo = document.getElementById("mainCenterLogo");
+var brandRight = document.getElementById("brandRight");
 
 var isChatStarted = false;
 var currentChatIndex = -1;
@@ -146,81 +149,30 @@ function handleFileSelect(event) {
 
     for (var i = 0; i < files.length; i++) {
         var file = files[i];
-        if (!file.type.startsWith("image/")) {
-            alert("الملفات غير المدعومة. الرجاء اختيار صورة.");
-            continue;
-        }
-
         var fileId = 'file-' + Date.now() + '-' + i;
         
-        // دالة مساعدة لضغط الصورة
-        var compressAndAdd = function(originalFile, id) {
+        attachedFiles.push({ id: fileId, file: file });
+
+        var previewDiv = document.createElement("div");
+        previewDiv.className = "preview-item";
+        previewDiv.id = fileId;
+
+        if (file.type.startsWith("image/")) {
             var reader = new FileReader();
             reader.onload = function(e) {
-                var img = new Image();
-                img.onload = function() {
-                    var canvas = document.createElement('canvas');
-                    var ctx = canvas.getContext('2d');
-                    
-                    // تحديد أقصى عرض أو ارتفاع (مثلاً 800 بكسل)
-                    var MAX_WIDTH = 800;
-                    var MAX_HEIGHT = 800;
-                    var width = img.width;
-                    var height = img.height;
-
-                    if (width > height) {
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
-                    } else {
-                        if (height > MAX_HEIGHT) {
-                            width *= MAX_HEIGHT / height;
-                            height = MAX_HEIGHT;
-                        }
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // ضغط الصورة بجودة 70%
-                    var compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7); // جودة 70%
-                    
-                    // عرض المعاينة
-                    var previewDiv = document.createElement("div");
-                    previewDiv.className = "preview-item";
-                    previewDiv.id = id;
-                    previewDiv.innerHTML = `<img src="${compressedDataUrl}">
-                    <div class="loading-circle" id="loader-${id}" style="display: block;"></div>
-                    <button class="cancel-btn" onclick="removeFile('${id}')">×</button>`;
-                    
-                    previewContainer.appendChild(previewDiv);
-                    
-                    // حفظ الملف المضغوط في المصفوفة (نستخدم Blob أو DataURL)
-                    attachedFiles.push({ id: id, file: dataURLtoBlob(compressedDataUrl) });
-
-                    setTimeout(() => {
-                        var loader = document.getElementById("loader-" + id);
-                        if(loader) loader.style.display = "none";
-                    }, 1500);
-                };
-                img.src = e.target.result;
+                document.getElementById(fileId).innerHTML = `<img src="${e.target.result}">
+                <div class="loading-circle" id="loader-${fileId}" style="display: block;"></div>
+                <button class="cancel-btn" onclick="removeFile('${fileId}')">×</button>`;
+                
+                setTimeout(() => {
+                    var loader = document.getElementById("loader-" + fileId);
+                    if(loader) loader.style.display = "none";
+                }, 1500);
             };
-            reader.readAsDataURL(originalFile);
-        };
-
-        // دالة مساعدة لتحويل DataURL إلى Blob (للاستخدام في الإرسال لاحقاً)
-        function dataURLtoBlob(dataurl) {
-            var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-                bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-            while(n--){
-                u8arr[n] = bstr.charCodeAt(n);
-            }
-            return new Blob([u8arr], {type:mime});
+            reader.readAsDataURL(file);
         }
-
-        compressAndAdd(file, fileId);
+        
+        previewContainer.appendChild(previewDiv);
     }
     
     event.target.value = '';
@@ -341,7 +293,12 @@ window.openChat = function(chat) {
     welcomeLogo.classList.add("started");
     isChatStarted = true;
     currentChatIndex = chat.id;
-    
+
+    // التعديل: تغيير اللوجوهات
+    sidebarDynamicLogo.src = "logo2.png";
+    mainCenterLogo.src = "logo2.png";
+    brandRight.style.display = "none";
+
     if (window.innerWidth < 768) {
         sidebar.classList.add("collapsed");
         if (openBtn) openBtn.style.display = "flex";
@@ -389,6 +346,11 @@ function addMessage(text, type, imageSrc = null) {
         sidebar.classList.add("collapsed"); 
         if(openBtn) openBtn.style.display = "flex";
         isChatStarted = true; 
+
+        // التعديل: تغيير اللوجوهات أول ما تبدأ المحادثة
+        sidebarDynamicLogo.src = "logo2.png";
+        mainCenterLogo.src = "logo2.png";
+        brandRight.style.display = "none";
     }
     var msgDiv = document.createElement("div");
     msgDiv.classList.add("message", type === "user" ? "user-msg" : "ai-msg");
@@ -420,7 +382,7 @@ function addMessage(text, type, imageSrc = null) {
     return msgDiv;
 }
 
-// دالة الكتابة المنظمة (بتكتب النص المنظم من الأول)
+// دالة الكتابة المنظمة
 function typeWriter(element, text, speed = 10) {
     element.innerHTML = ""; 
     element.classList.add("typing"); 
@@ -433,7 +395,6 @@ function typeWriter(element, text, speed = 10) {
                 currentText += text.charAt(i); 
                 i++;
                 
-                // بنكتب النص المنظم (HTML) طول ما هو بيكتب
                 element.innerHTML = marked.parse(currentText);
                 
                 var isBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 50;
@@ -483,6 +444,11 @@ btnDiagnose.addEventListener("click", async function() {
 
     var aiMsgDiv = addMessage("", "ai");
     
+    // التعديل: نيون أخضر
+    var neonRing = document.createElement("div");
+    neonRing.className = "loading-neon-ring active";
+    aiMsgDiv.appendChild(neonRing);
+
     if (currentChatIndex === -1) {
         var dateStr = new Date().toLocaleString('ar-EG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
         var newChatId = Date.now().toString();
@@ -495,14 +461,16 @@ btnDiagnose.addEventListener("click", async function() {
         } catch (e) { console.error(e); }
     }
 
-    // بنبعت الرسالة والصورة
     var aiAnswer = await askGroqAI(finalMessage, imageDataUrl);
     
     if (!aiAnswer) { aiAnswer = "حدث خطأ، تأكد من الاتصال."; }
     
-    // هنا بنستخدم دالة الكتابة اللي بتكتب منظم
     await typeWriter(aiMsgDiv, aiAnswer, 10);
     
+    // إطفاء النيون بعد الرد
+    neonRing.classList.remove("active");
+    neonRing.remove();
+
     if(currentChatIndex !== -1) {
         var currentContent = chatContainer.innerHTML;
         var currentChat = userChats.find(c => c.id === currentChatIndex);
@@ -536,6 +504,11 @@ newChatBtn.addEventListener("click", function() {
     problemText.style.height = "auto";
     previewContainer.innerHTML = "";
     attachedFiles = [];
+
+    // التعديل: رجوع اللوجوهات
+    sidebarDynamicLogo.src = "logo.png";
+    mainCenterLogo.src = "logo.png";
+    brandRight.style.display = "flex";
     
     if (openBtn) openBtn.style.display = "none";
 });
