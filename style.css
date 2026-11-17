@@ -5,19 +5,49 @@ body { background-color: var(--bg-dark); color: var(--text-main); display: flex;
 .sidebar.collapsed { width: 0; padding: 0; border: none; }
 .sidebar-header { width: 100%; display: flex; justify-content: space-between; align-items: center; }
 .sidebar-logo { width: 40px; object-fit: contain; }
-.sidebar-actions { display: flex; gap: 10px; width: 100%; justify-content: flex-start; }
-#searchContainer { width: 100%; margin-top: 10px; }
-#searchInput { width: 100%; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: white; font-family: 'Cairo'; }
+.close-btn { background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: white; padding: 5px; border-radius: 8px; cursor: pointer; display: flex; }
+.new-chat-btn { width: 100%; padding: 10px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 10px; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
+.new-chat-btn:hover { background: rgba(255,255,255,0.1); }
+.search-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 1000; display: flex; align-items: flex-start; justify-content: center; padding-top: 20px; }
+.search-box { width: 90%; max-width: 400px; background: #1e1e1e; border: 1px solid var(--glass-border); border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 10px; }
+.search-box input { flex: 1; background: transparent; border: none; color: white; outline: none; font-family: 'Cairo'; }
+
 .main-content { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; }
 .welcome-logo { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; transition: all 0.5s ease; }
 .welcome-logo.started { flex: 0; justify-content: flex-start; padding-top: 20px; margin-bottom: 10px; }
-.welcome-logo.started .welcome-text { display: none; }
+.welcome-logo.started .welcome-text, .welcome-logo.started .brand-right { display: none; }
+.welcome-logo.started .logo-container { margin-bottom: 0; }
+.welcome-logo.started .main-logo { width: 40px; margin-right: 15px; }
 .logo-container { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
-.main-logo { width: 60px; }
+.main-logo { width: 60px; transition: 0.3s; }
 .brand-right { display: flex; flex-direction: row-reverse; align-items: center; gap: 5px; color: #888; font-size: 14px; }
 .naghi-logo { height: 20px; }
 .welcome-text { font-size: 24px; color: #e0e0e0; text-align: center; font-weight: 700; }
-.chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; max-width: 900px; margin: 0 auto; width: 100%; }
+.chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; max-width: 900px; margin: 0 auto; width: 100%; scrollbar-color: #000 var(--bg-dark); scrollbar-width: thin; }
+.chat-container::-webkit-scrollbar { width: 6px; }
+.chat-container::-webkit-scrollbar-track { background: var(--bg-dark); }
+.chat-container::-webkit-scrollbar-thumb { background: #000; border-radius: 3px; }
+
+/* سهم التمرير في السايدبار */
+.chat-history-scroll {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 5px;
+    scrollbar-width: thin;
+    scrollbar-color: transparent var(--bg-dark);
+}
+.chat-history-scroll:hover {
+    scrollbar-color: #000 var(--bg-dark);
+}
+.chat-history-scroll::-webkit-scrollbar { width: 6px; }
+.chat-history-scroll::-webkit-scrollbar-track { background: var(--bg-dark); }
+.chat-history-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
+.chat-history-scroll:hover::-webkit-scrollbar-thumb { background: #000; }
+
 .input-area { padding: 15px; display: flex; justify-content: center; background: linear-gradient(to top, var(--bg-dark) 50%, transparent); z-index: 10; flex-direction: column; align-items: center; }
 .input-box { width: 100%; max-width: 800px; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 30px; padding: 10px 15px; display: flex; align-items: flex-end; box-shadow: 0 8px 32px rgba(0,0,0,0.5); position: relative; }
 textarea { flex: 1; background: transparent; border: none; color: white; font-size: 16px; font-family: 'Cairo'; resize: none; outline: none; max-height: 120px; padding: 0 10px; }
@@ -26,7 +56,7 @@ textarea { flex: 1; background: transparent; border: none; color: white; font-si
 .attach-btn:hover { color: var(--accent); }
 .message { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 12px; line-height: 1.6; font-size: 15px; }
 .user-msg { background: #1e1e1e; align-self: flex-start; border-radius: 12px 12px 0 12px; max-width: 85%; }
-.ai-msg { background: transparent; border-right: 3px solid var(--accent); padding-right: 15px; max-width: 100%; font-size: 15px; }
+.ai-msg { background: transparent; border-right: 3px solid var(--accent); padding-right: 15px; max-width: 100%; font-size: 15px; position: relative; }
 
 .ai-msg p { margin-bottom: 10px; }
 .ai-msg strong { color: var(--accent); font-weight: 700; }
@@ -39,11 +69,16 @@ textarea { flex: 1; background: transparent; border: none; color: white; font-si
 .ai-msg th, .ai-msg td { border: 1px solid var(--glass-border); padding: 8px 12px; text-align: right; }
 .ai-msg th { background: rgba(0, 184, 148, 0.1); color: var(--accent); font-weight: bold; }
 
+.loading-neon-ring { position: absolute; top: -5px; left: -5px; right: -5px; bottom: -5px; border-radius: 15px; pointer-events: none; z-index: 1; border: 2px solid transparent; }
+.loading-neon-ring.active { border-color: var(--accent); box-shadow: 0 0 15px var(--accent), inset 0 0 10px var(--accent); animation: neon-pulse 1.5s infinite alternate; }
+@keyframes neon-pulse { from { opacity: 0.5; } to { opacity: 1; } }
+
+.scroll-btn { position: absolute; bottom: -20px; right: 50%; transform: translateX(50%); width: 30px; height: 30px; border-radius: 50%; background: #1e1e1e; border: 1px solid var(--accent); color: var(--accent); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; opacity: 0; transition: 0.3s; box-shadow: 0 0 10px var(--accent); }
+.scroll-btn.show { opacity: 1; }
+
 .preview-container { width: 100%; max-width: 800px; display: flex; gap: 10px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 5px; }
 .preview-item { position: relative; width: 60px; height: 60px; border-radius: 10px; background: #1e1e1e; display: flex; align-items: center; justify-content: center; border: 1px solid var(--glass-border); flex-shrink: 0; }
 .preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
-.preview-item svg { width: 30px; height: 30px; }
-
 .cancel-btn { position: absolute; top: -5px; right: -5px; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); color: white; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.3s; z-index: 10; }
 .cancel-btn:hover { background: #ff4757; border-color: #ff4757; transform: scale(1.1); }
 
@@ -54,6 +89,7 @@ textarea { flex: 1; background: transparent; border: none; color: white; font-si
 .attachment-menu.active { display: flex; }
 .attach-option { background: transparent; border: none; color: #ccc; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; font-family: 'Cairo'; font-size: 12px; padding: 10px; border-radius: 8px; transition: 0.3s; }
 .attach-option:hover { background: rgba(255,255,255,0.1); color: white; }
+
 .chat-item-container { position: relative; display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; transition: 0.3s; width: 100%; }
 .chat-item-container:hover { border-color: var(--glass-border); background: rgba(255,255,255,0.08); }
 .chat-item-content { flex: 1; overflow: hidden; }
