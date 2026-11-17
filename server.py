@@ -35,9 +35,8 @@ def ask():
         # لو فيه صورة، بنفصل الـ Mime Type عن الـ Base64
         if image_data:
             try:
-                # image_data شكله كده: data:image/jpeg;base64,/9j/4AAQSk...
                 header, base64_str = image_data.split(",", 1)
-                mime_type = header.split(":")[1].split(";")[0] # بياخد image/jpeg أو image/png
+                mime_type = header.split(":")[1].split(";")[0] 
                 
                 parts.append({
                     "inline_data": {
@@ -56,16 +55,16 @@ def ask():
             }
         }
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+        # ⚠️ التعديل هنا: استخدمنا gemini-2.5-flash بدل gemini-1.5-flash
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
         headers = {"Content-Type": "application/json"}
 
-        # بنبعت الطلب لـ جوجل
         res = requests.post(url, headers=headers, json=payload, timeout=20)
         res.raise_for_status()
         
         response_data = res.json()
 
-        # استخراج النص من رد جوجل عشان نبعته للواجهة بالشكل اللي هي متعودة عليه
+        # استخراج النص من رد جوجل عشان نبعته للواجهة
         try:
             ai_text = response_data['candidates'][0]['content']['parts'][0]['text']
             # بنرجع الرد بنفس شكل OpenAI عشان script.js ميتلخبطش
@@ -76,7 +75,6 @@ def ask():
             }
             return jsonify(formatted_response)
         except (KeyError, IndexError):
-            # لو جوجل رد بشكل غريب (زي فلتر المحتوى)
             return jsonify({"error": "جوجل رفض يرد على الرسالة دي. ممكن تكون الصورة مش واضحة أو فيها حاجة ممنوعة."}), 502
 
     except requests.exceptions.Timeout:
