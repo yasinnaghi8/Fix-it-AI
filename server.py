@@ -1,5 +1,4 @@
 import os
-import time
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
@@ -12,82 +11,76 @@ def ask():
     try:
         data = request.get_json(silent=True) or {}
         msg = data.get('message', '').strip()
-        image_data = data.get('image')
+        image_data = data.get('image') # Base64 Data URL
 
         if not msg and not image_data:
             return jsonify({"error": "Message or image is required"}), 400
 
-        gemini_key = os.environ.get("GEMINI_API_KEY")
-        if not gemini_key:
-            return jsonify({"error": "GEMINI_API_KEY is missing in Vercel"}), 500
+        groq_key = os.environ.get("GROQ_API_KEY")
+        if not groq_key:
+            return jsonify({"error": "GROQ_API_KEY is missing in Vercel"}), 500
 
         prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل لو موجودة. رد بالعامية المصرية وادي خطوات عملية."
         
         parts = []
-        if msg:
-            parts.append({"text": msg})
-        else:
-            parts.append({"text": "حلل الصورة دي وقولي المشكلة إيه؟"})
+        # 1. إضافة النص
+        parts.append({"type": "text", "text": msg if msg else "حلل الصورة دي وقولي المشكلة إيه؟"})
 
+        # 2. إضافة الصورة (لو موجودة) - تنسيق Groq الرسمي
         if image_data:
-            try:
-                header, base64_str = image_data.split(",", 1)
-                mime_type = header.split(":")[1].split(";")[0]
-                parts.append({
-                    "inline_data": {
-                        "mime_type": mime_type,
-                        "data": base64_str
-                    }
-                })
-            except Exception as e:
-                return jsonify({"error": "مشكلة في تنسيق الصورة"}), 400
+            parts.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": image_data # بنبعت الـ Base64 Data URL زي ما هو
+                }
+            })
 
-        payload = {
-            "contents": [{"parts": parts}],
-            "system_instruction": {
-                "parts": [{"text": prompt}]
-            }
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {groq_key}",
+            "Content-Type": "application/json"
         }
 
-        # استخدام مسار v1beta الصحيح للموديل
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={gemini_key}"
-        headers = {"Content-Type": "application/json"}
+        # 3. اختيار الموديل: qwen للصور، gpt-oss للنصوص
+        if image_data:
+            body = {
+                "model": "qwen/qwen3.8-27b", # موديل الرؤية من Groq
+                "messages": [
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": parts}
+                ],
+                "temperature": 0.3 # عشان الإجابة تبقى دقيقة
+            }
+        else:
+            body = {
+                "model": "openai/gpt-oss-20b", # موديل النصوص
+                "messages": [
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": msg}
+                ]
+            }
 
-        max_retries = 3
-        response = None
-        for attempt in range(max_retries):
-            try:
-                response = requests.post(url, headers=headers, json=payload, timeout=30)
-                
-                if response.status_code == 503:
-                    if attempt < max_retries - 1:
-                        time.sleep(2)  # انتظر ثانيتين قبل المحاولة التالية
-                        continue
-                    else:
-                        return jsonify({"error": "خوادم جوجل مشغولة جداً حالياً. جرب تاني بعد شوية."}), 503
-                
-                response.raise_for_status()
-                break  # الخروج من الحلقة إذا نجح الطلب
-
-            except requests.exceptions.RequestException as e:
-                if attempt == max_retries - 1:
-                    return jsonify({"error": f"فشل الاتصال بجوجل بعد عدة محاولات: {str(e)}"}), 502
-
-        response_data = response.json()
-
+        # 4. إرسال الطلب
+        res = requests.post(url, headers=headers, json=body, timeout=20)
+        res.raise_for_status()
+        
+        response_data = res.json()
+        
+        # 5. استخراج الرد وتنسيقه
         try:
-            ai_text = response_data['candidates'][0]['content']['parts'][0]['text']
-            formatted_response = {
+            ai_text = response_data['choices'][0]['message']['content']
+            return jsonify({
                 "choices": [
                     {"message": {"content": ai_text}}
                 ]
-            }
-            return jsonify(formatted_response)
+            })
         except (KeyError, IndexError):
-            return jsonify({"error": "جوجل رفض يرد. قد تكون الصورة غير واضحة أو المحتوى مرفوضًا."}), 502
+            return jsonify({"error": "Groq رفض يرد. قد تكون الصورة غير واضحة أو المحتوى مرفوض."}), 502
 
     except requests.exceptions.Timeout:
-        return jsonify({"error": "السيرفر استغرق وقتًا طويلاً. حاول مرة أخرى."}), 504
+        return jsonify({"error": "السيرفر استغرق وقتًا طويلاً. جرب صورة أصغر."}), 504
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"مشكلة في الاتصال بـ Groq: {str(e)}"}), 502
     except Exception as e:
         return jsonify({"error": f"خطأ داخلي: {str(e)}"}), 500
 
