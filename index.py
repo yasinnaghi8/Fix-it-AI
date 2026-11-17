@@ -20,7 +20,7 @@ def ask():
 
     prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل لو موجودة. رد بالعامية المصرية وادي خطوات عملية."
 
-    # 1. لو فيه صورة، نستخدم OpenRouter (موديل جوجل)
+    # 1. لو فيه صورة، نستخدم OpenRouter (بالموديل الجديد)
     if image_data and openrouter_key:
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {
@@ -30,7 +30,7 @@ def ask():
             "Content-Type": "application/json"
         }
         body = {
-            "model": "google/gemini-2.0-flash-exp:free",
+            "model": "qwen/qwen2.5-vl-7b-instruct:free", # الموديل الجديد اللي بيشوف
             "messages": [
                 {"role": "system", "content": prompt},
                 {
