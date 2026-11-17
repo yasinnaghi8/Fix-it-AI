@@ -2,7 +2,6 @@ import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
-import json
 
 app = Flask(__name__)
 CORS(app)
@@ -12,31 +11,31 @@ def ask():
     try:
         data = request.get_json(silent=True) or {}
         msg = data.get('message', '').strip()
-        image_data = data.get('image') # ده الـ Base64
+        image_data = data.get('image') # Base64 Data URL
 
         if not msg and not image_data:
             return jsonify({"error": "Message or image is required"}), 400
 
-        # بنجيب المفتاح من إعدادات Vercel
+        # جلب المفتاح من متغيرات البيئة في Vercel
         gemini_key = os.environ.get("GEMINI_API_KEY")
         if not gemini_key:
             return jsonify({"error": "GEMINI_API_KEY is missing in Vercel"}), 500
 
-        # تجهيز البرومبت الأساسي
         prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل لو موجودة. رد بالعامية المصرية وادي خطوات عملية."
         
-        # تجهيز الرسالة (Parts)
         parts = []
+        # 1. إضافة النص إذا وُجد
         if msg:
             parts.append({"text": msg})
         else:
             parts.append({"text": "حلل الصورة دي وقولي المشكلة إيه؟"})
 
-        # لو فيه صورة، بنفصل الـ Mime Type عن الـ Base64
+        # 2. إضافة الصورة إذا وُجدت (بصيغة inline_data)
         if image_data:
             try:
+                # فصل الـ MIME type عن بيانات Base64
                 header, base64_str = image_data.split(",", 1)
-                mime_type = header.split(":")[1].split(";")[0] 
+                mime_type = header.split(":")[1].split(";")[0] # image/jpeg أو image/png
                 
                 parts.append({
                     "inline_data": {
@@ -47,7 +46,7 @@ def ask():
             except Exception as e:
                 return jsonify({"error": "مشكلة في تنسيق الصورة"}), 400
 
-        # تجهيز الـ Payload لـ Gemini
+        # 3. تجهيز الطلب النهائي
         payload = {
             "contents": [{"parts": parts}],
             "system_instruction": {
@@ -55,19 +54,20 @@ def ask():
             }
         }
 
-        # ⚠️ التعديل هنا: استخدمنا gemini-2.5-flash بدل gemini-1.5-flash
-       url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
+        # استخدام موديل Gemini 3.8 Flash المستقر
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={gemini_key}"
         headers = {"Content-Type": "application/json"}
 
-        res = requests.post(url, headers=headers, json=payload, timeout=20)
+        # إرسال الطلب إلى Google
+        res = requests.post(url, headers=headers, json=payload, timeout=30)
         res.raise_for_status()
         
         response_data = res.json()
 
-        # استخراج النص من رد جوجل عشان نبعته للواجهة
+        # استخراج النص من الرد
         try:
             ai_text = response_data['candidates'][0]['content']['parts'][0]['text']
-            # بنرجع الرد بنفس شكل OpenAI عشان script.js ميتلخبطش
+            # إعادة تنسيق الرد ليتوافق مع الواجهة
             formatted_response = {
                 "choices": [
                     {"message": {"content": ai_text}}
@@ -75,10 +75,10 @@ def ask():
             }
             return jsonify(formatted_response)
         except (KeyError, IndexError):
-            return jsonify({"error": "جوجل رفض يرد على الرسالة دي. ممكن تكون الصورة مش واضحة أو فيها حاجة ممنوعة."}), 502
+            return jsonify({"error": "جوجل رفض يرد. قد تكون الصورة غير واضحة أو المحتوى مرفوضًا."}), 502
 
     except requests.exceptions.Timeout:
-        return jsonify({"error": "السيرفر خد وقت كبير أوي وجوجل ماردش. جرب تاني."}), 504
+        return jsonify({"error": "السيرفر استغرق وقتًا طويلاً. حاول مرة أخرى."}), 504
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"مشكلة في الاتصال بجوجل: {str(e)}"}), 502
     except Exception as e:
