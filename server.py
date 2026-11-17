@@ -2,6 +2,7 @@ import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -11,78 +12,79 @@ def ask():
     try:
         data = request.get_json(silent=True) or {}
         msg = data.get('message', '').strip()
-        image_data = data.get('image')
+        image_data = data.get('image') # ده الـ Base64
 
         if not msg and not image_data:
             return jsonify({"error": "Message or image is required"}), 400
 
-        groq_key = os.environ.get("GROQ_API_KEY")
-        openrouter_key = os.environ.get("OPENROUTER_API_KEY")
+        # بنجيب المفتاح من إعدادات Vercel
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+        if not gemini_key:
+            return jsonify({"error": "GEMINI_API_KEY is missing in Vercel"}), 500
 
+        # تجهيز البرومبت الأساسي
         prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل لو موجودة. رد بالعامية المصرية وادي خطوات عملية."
-
-        # 1. إذا وُجدت صورة، نستخدم OpenRouter (بموديل جديد وأكثر استقراراً)
-        if image_data and openrouter_key:
-            url = "https://openrouter.ai/api/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {openrouter_key}",
-                "HTTP-Referer": "https://fixit-ai-seven.vercel.app",
-                "X-Title": "FixIt AI",
-                "Content-Type": "application/json"
-            }
-            body = {
-                "model": "qwen/qwen2.5-vl-72b-instruct", # الموديل الجديد
-                "messages": [
-                    {"role": "system", "content": prompt},
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": msg if msg else "حلل الصورة دي بالتفصيل"},
-                            # تأكد من أن image_data يبدأ بـ "data:image/jpeg;base64,"
-                            {"type": "image_url", "image_url": {"url": image_data}}
-                        ]
-                    }
-                ]
-            }
-            res = requests.post(url, headers=headers, json=body, timeout=15) # زيادة الوقت قليلاً
-            res.raise_for_status()
-            return jsonify(res.json())
-
-        # 2. إذا لم توجد صورة، نستخدم Groq
-        elif groq_key:
-            url = "https://api.groq.com/openai/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {groq_key}",
-                "Content-Type": "application/json"
-            }
-            body = {
-                "model": "openai/gpt-oss-20b",
-                "messages": [
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": msg}
-                ]
-            }
-            res = requests.post(url, headers=headers, json=body, timeout=15)
-            res.raise_for_status()
-            return jsonify(res.json())
         
+        # تجهيز الرسالة (Parts)
+        parts = []
+        if msg:
+            parts.append({"text": msg})
         else:
-            return jsonify({"error": "مفاتيح الـ API مش موجودة في Vercel"}), 500
+            parts.append({"text": "حلل الصورة دي وقولي المشكلة إيه؟"})
+
+        # لو فيه صورة، بنفصل الـ Mime Type عن الـ Base64
+        if image_data:
+            try:
+                # image_data شكله كده: data:image/jpeg;base64,/9j/4AAQSk...
+                header, base64_str = image_data.split(",", 1)
+                mime_type = header.split(":")[1].split(";")[0] # بياخد image/jpeg أو image/png
+                
+                parts.append({
+                    "inline_data": {
+                        "mime_type": mime_type,
+                        "data": base64_str
+                    }
+                })
+            except Exception as e:
+                return jsonify({"error": "مشكلة في تنسيق الصورة"}), 400
+
+        # تجهيز الـ Payload لـ Gemini
+        payload = {
+            "contents": [{"parts": parts}],
+            "system_instruction": {
+                "parts": [{"text": prompt}]
+            }
+        }
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+        headers = {"Content-Type": "application/json"}
+
+        # بنبعت الطلب لـ جوجل
+        res = requests.post(url, headers=headers, json=payload, timeout=20)
+        res.raise_for_status()
+        
+        response_data = res.json()
+
+        # استخراج النص من رد جوجل عشان نبعته للواجهة بالشكل اللي هي متعودة عليه
+        try:
+            ai_text = response_data['candidates'][0]['content']['parts'][0]['text']
+            # بنرجع الرد بنفس شكل OpenAI عشان script.js ميتلخبطش
+            formatted_response = {
+                "choices": [
+                    {"message": {"content": ai_text}}
+                ]
+            }
+            return jsonify(formatted_response)
+        except (KeyError, IndexError):
+            # لو جوجل رد بشكل غريب (زي فلتر المحتوى)
+            return jsonify({"error": "جوجل رفض يرد على الرسالة دي. ممكن تكون الصورة مش واضحة أو فيها حاجة ممنوعة."}), 502
 
     except requests.exceptions.Timeout:
-        return jsonify({"error": "الطلب خد وقت كبير أوي والسيرفر قطع الاتصال. جرب تاني."}), 504
+        return jsonify({"error": "السيرفر خد وقت كبير أوي وجوجل ماردش. جرب تاني."}), 504
     except requests.exceptions.RequestException as e:
-        # استخراج رسالة الخطأ من OpenRouter إن أمكن
-        error_message = str(e)
-        if e.response is not None:
-            try:
-                error_data = e.response.json()
-                error_message = error_data.get("error", {}).get("message", str(e))
-            except:
-                pass
-        return jsonify({"error": f"مشكلة في الاتصال بالـ API: {error_message}"}), 502
+        return jsonify({"error": f"مشكلة في الاتصال بجوجل: {str(e)}"}), 502
     except Exception as e:
-        return jsonify({"error": f"خطأ داخلي في السيرفر: {str(e)}"}), 500
+        return jsonify({"error": f"خطأ داخلي: {str(e)}"}), 500
 
 @app.route('/health', methods=['GET'])
 def health():
