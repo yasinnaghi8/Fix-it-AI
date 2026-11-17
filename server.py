@@ -21,7 +21,7 @@ def ask():
 
         prompt = "أنت صنايعي مصري شاطر ومحترف. حلل الصورة دي بالتفصيل لو موجودة. رد بالعامية المصرية وادي خطوات عملية."
 
-        # لو فيه صورة، نستخدم OpenRouter
+        # 1. إذا وُجدت صورة، نستخدم OpenRouter (بموديل جديد وأكثر استقراراً)
         if image_data and openrouter_key:
             url = "https://openrouter.ai/api/v1/chat/completions"
             headers = {
@@ -31,24 +31,24 @@ def ask():
                 "Content-Type": "application/json"
             }
             body = {
-                "model": "qwen/qwen2.5-vl-7b-instruct:free", 
+                "model": "qwen/qwen2.5-vl-72b-instruct", # الموديل الجديد
                 "messages": [
                     {"role": "system", "content": prompt},
                     {
                         "role": "user",
                         "content": [
                             {"type": "text", "text": msg if msg else "حلل الصورة دي بالتفصيل"},
+                            # تأكد من أن image_data يبدأ بـ "data:image/jpeg;base64,"
                             {"type": "image_url", "image_url": {"url": image_data}}
                         ]
                     }
                 ]
             }
-            # قللنا الوقت لـ 9 ثواني عشان Vercel ميعملش Timeout
-            res = requests.post(url, headers=headers, json=body, timeout=9)
+            res = requests.post(url, headers=headers, json=body, timeout=15) # زيادة الوقت قليلاً
             res.raise_for_status()
             return jsonify(res.json())
 
-        # لو مفيش صورة، نستخدم Groq
+        # 2. إذا لم توجد صورة، نستخدم Groq
         elif groq_key:
             url = "https://api.groq.com/openai/v1/chat/completions"
             headers = {
@@ -62,7 +62,7 @@ def ask():
                     {"role": "user", "content": msg}
                 ]
             }
-            res = requests.post(url, headers=headers, json=body, timeout=9)
+            res = requests.post(url, headers=headers, json=body, timeout=15)
             res.raise_for_status()
             return jsonify(res.json())
         
@@ -72,7 +72,15 @@ def ask():
     except requests.exceptions.Timeout:
         return jsonify({"error": "الطلب خد وقت كبير أوي والسيرفر قطع الاتصال. جرب تاني."}), 504
     except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"مشكلة في الاتصال بالـ API: {str(e)}"}), 502
+        # استخراج رسالة الخطأ من OpenRouter إن أمكن
+        error_message = str(e)
+        if e.response is not None:
+            try:
+                error_data = e.response.json()
+                error_message = error_data.get("error", {}).get("message", str(e))
+            except:
+                pass
+        return jsonify({"error": f"مشكلة في الاتصال بالـ API: {error_message}"}), 502
     except Exception as e:
         return jsonify({"error": f"خطأ داخلي في السيرفر: {str(e)}"}), 500
 
