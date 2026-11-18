@@ -3,7 +3,7 @@
 body { background-color: var(--bg-dark); color: var(--text-main); display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
 
 /* السايدبار */
-.sidebar { width: 260px; background: var(--glass-bg); backdrop-filter: blur(25px); border-left: 1px solid var(--glass-border); padding: 15px; display: flex; flex-direction: column; gap: 10px; transition: all 0.3s ease; overflow: hidden; align-items: flex-start; }
+.sidebar { width: 260px; background: var(--glass-bg); backdrop-filter: blur(25px); border-left: 1px solid var(--glass-border); padding: 15px; display: flex; flex-direction: column; gap: 10px; transition: all 0.3s ease; overflow: hidden; align-items: flex-start; position: relative; }
 .sidebar.collapsed { width: 0; padding: 0; border: none; }
 .sidebar-header { width: 100%; display: flex; justify-content: space-between; align-items: center; }
 .sidebar-logo { width: 40px; object-fit: contain; }
@@ -18,6 +18,10 @@ body { background-color: var(--bg-dark); color: var(--text-main); display: flex;
 .chat-history-scroll::-webkit-scrollbar { width: 6px; }
 .chat-history-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
 .chat-history-scroll:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+
+/* سهم التمرير في السايدبار */
+.scroll-btn-sidebar { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); width: 30px; height: 30px; border-radius: 50%; background: #1e1e1e; border: 1px solid var(--accent); color: var(--accent); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; box-shadow: 0 0 10px var(--accent); }
+.scroll-btn-sidebar.hidden { display: none; }
 
 /* User Profile */
 .user-profile { margin-top: auto; display: flex; align-items: center; justify-content: space-between; padding-top: 15px; border-top: 1px solid var(--glass-border); width: 100%; }
@@ -71,6 +75,8 @@ body { background-color: var(--bg-dark); color: var(--text-main); display: flex;
     border-radius: 10px; 
     padding: 5px; 
 }
+
+.top-actions-mobile { display: none; }
 
 /* Welcome */
 .welcome-logo { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; transition: all 0.5s ease; }
@@ -177,7 +183,9 @@ textarea { flex: 1; background: transparent; border: none; color: white; font-si
     .chat-container { padding: 10px; }
     .message { font-size: 15px; }
     
-    .top-shortcuts { display: none; } /* إخفاء الشايب في الموبايل */
-    .top-logo { display: none; } /* إخفاء اللوجو في الموبايل */
-    .floating-sidebar-btn { display: none; } /* إخفاء زرار السايدبار العايم */
+    .top-shortcuts { display: none; }
+    .top-logo { display: none; }
+    .top-actions-mobile { display: flex; gap: 5px; }
+    
+    .floating-sidebar-btn { display: none; }
 }
