@@ -64,6 +64,7 @@ var openSidebarBtn = document.getElementById("openSidebarBtn");
 var topLogo = document.getElementById("topLogo");
 var chatHeaderBar = document.getElementById("chatHeaderBar");
 var scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
+var headerChatTitle = document.getElementById("headerChatTitle");
 
 var isChatStarted = false;
 var currentChatIndex = -1;
@@ -92,11 +93,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
 function toggleSidebarFunc() {
     sidebar.classList.toggle("collapsed");
-    if (sidebar.classList.contains("collapsed")) {
-        if (openSidebarBtn) openSidebarBtn.style.display = "flex";
-    } else {
-        if (openSidebarBtn) openSidebarBtn.style.display = "none";
-    }
 }
 
 toggleSidebar.addEventListener("click", toggleSidebarFunc);
@@ -230,6 +226,10 @@ function renderHistory() {
         menu.className = "options-menu";
         menu.id = "menu-" + chat.id;
         menu.innerHTML = `
+            <button class="opt-btn" onclick="renameChat(event, '${chat.id}')">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#888" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                إعادة تسمية
+            </button>
             <button class="opt-btn" onclick="pinChat(event, '${chat.id}')">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="#888" stroke-width="2" fill="none"><path d="M12 17v5M9 10.76V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4.76a2 2 0 0 0 .59 1.42l1.24 1.24A1 1 0 0 1 17 15H7a1 1 0 0 1-.83-1.58l1.24-1.24A2 2 0 0 0 9 10.76Z"/></svg>
                 ${chat.pinned ? 'إلغاء التثبيت' : 'تثبيت'}
@@ -279,10 +279,26 @@ window.openChat = function(chat) {
     currentChatIndex = chat.id;
     chatHeaderBar.classList.add("active");
     topLogo.style.display = "block";
+    headerChatTitle.textContent = chat.title;
 
     if (window.innerWidth < 768) {
         sidebar.classList.add("collapsed");
     }
+}
+
+window.renameChat = async function(e, chatId) {
+    e.stopPropagation();
+    var newTitle = prompt("أدخل الاسم الجديد للمحادثة:");
+    if (newTitle && newTitle.trim() !== "") {
+        try {
+            await setDoc(doc(db, "users", currentUserUID, "chats", chatId), { title: newTitle.trim() }, { merge: true });
+            loadHistory();
+            if (currentChatIndex === chatId) {
+                headerChatTitle.textContent = newTitle.trim();
+            }
+        } catch (error) { console.error(error); }
+    }
+    document.querySelectorAll(".options-menu").forEach(m => m.classList.remove("active"));
 }
 
 window.pinChat = async function(e, chatId) {
@@ -423,11 +439,12 @@ btnDiagnose.addEventListener("click", async function() {
     if (currentChatIndex === -1) {
         var dateStr = new Date().toLocaleString('ar-EG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
         var newChatId = Date.now().toString();
-        var newChatData = { title: "جاري التلخيص...", date: dateStr, content: "", pinned: false, timestamp: Date.now() };
+        var newChatData = { title: "محادثة جديدة", date: dateStr, content: "", pinned: false, timestamp: Date.now() };
         
         try {
             await setDoc(doc(db, "users", currentUserUID, "chats", newChatId), newChatData);
             currentChatIndex = newChatId;
+            headerChatTitle.textContent = "محادثة جديدة";
             loadHistory();
         } catch (e) { console.error(e); }
     }
@@ -446,10 +463,11 @@ btnDiagnose.addEventListener("click", async function() {
         var currentChat = userChats.find(c => c.id === currentChatIndex);
         var updateData = { content: currentContent };
         
-        if (currentChat && currentChat.title === "جاري التلخيص...") {
+        if (currentChat && currentChat.title === "محادثة جديدة") {
             var summaryPrompt = "لخص هذه المشكلة في 3 كلمات كحد أقصى لتكون عنوان للمحادثة، بدون أي زخرفة: " + (userText || "مرفقات");
             var shortTitle = await askGroqAI(summaryPrompt);
             updateData.title = shortTitle.replace(/["']/g, "").substring(0, 30);
+            headerChatTitle.textContent = updateData.title;
         }
         
         try {
@@ -476,6 +494,7 @@ newChatBtn.addEventListener("click", function() {
     attachedFiles = [];
     chatHeaderBar.classList.remove("active");
     topLogo.style.display = "none";
+    headerChatTitle.textContent = "محادثة جديدة";
 });
 
 searchBtn.addEventListener("click", function() { searchContainer.classList.toggle("hidden"); if (!searchContainer.classList.contains("hidden")) { searchInput.focus(); } });
@@ -485,7 +504,6 @@ searchInput.addEventListener("input", function(e) {
     messages.forEach(function(msg) { if (msg.textContent.toLowerCase().includes(term)) { msg.style.display = "block"; } else { msg.style.display = "none"; } });
 });
 
-// التمرير للأسفل
 chatContainer.addEventListener("scroll", function() {
     var isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 50;
     if (isAtBottom) {
@@ -504,3 +522,16 @@ document.addEventListener("click", function(e) {
         document.querySelectorAll(".options-menu").forEach(m => m.classList.remove("active"));
     }
 });
+
+window.editChatTitleFromHeader = async function() {
+    if (currentChatIndex !== -1) {
+        var newTitle = prompt("أدخل الاسم الجديد للمحادثة:");
+        if (newTitle && newTitle.trim() !== "") {
+            try {
+                await setDoc(doc(db, "users", currentUserUID, "chats", currentChatIndex), { title: newTitle.trim() }, { merge: true });
+                headerChatTitle.textContent = newTitle.trim();
+                loadHistory();
+            } catch (error) { console.error(error); }
+        }
+    }
+}
