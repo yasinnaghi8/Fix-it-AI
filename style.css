@@ -63,7 +63,14 @@ body { background-color: var(--bg-dark); color: var(--text-main); display: flex;
 }
 .header-chat-title:hover { color: var(--accent); }
 
-.top-actions { display: flex; gap: 5px; }
+.top-shortcuts { 
+    display: flex; 
+    gap: 5px; 
+    background: var(--glass-bg); 
+    border: 1px solid var(--glass-border); 
+    border-radius: 10px; 
+    padding: 5px; 
+}
 
 /* Welcome */
 .welcome-logo { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; transition: all 0.5s ease; }
@@ -170,7 +177,7 @@ textarea { flex: 1; background: transparent; border: none; color: white; font-si
     .chat-container { padding: 10px; }
     .message { font-size: 15px; }
     
-    .top-logo { display: none; }
-    
-    .floating-sidebar-btn { display: none; }
+    .top-shortcuts { display: none; } /* إخفاء الشايب في الموبايل */
+    .top-logo { display: none; } /* إخفاء اللوجو في الموبايل */
+    .floating-sidebar-btn { display: none; } /* إخفاء زرار السايدبار العايم */
 }
