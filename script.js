@@ -51,7 +51,6 @@ var sidebar = document.getElementById("sidebar");
 var toggleSidebar = document.getElementById("toggleSidebar");
 var searchBtn = document.getElementById("searchBtn");
 var newChatBtn = document.getElementById("newChatBtn");
-var searchContainer = document.getElementById("searchContainer");
 var searchInput = document.getElementById("searchInput");
 var btnDiagnose = document.getElementById("btnDiagnose");
 var problemText = document.getElementById("problemText");
@@ -66,9 +65,18 @@ var chatHeaderBar = document.getElementById("chatHeaderBar");
 var scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
 var headerChatTitle = document.getElementById("headerChatTitle");
 
+// العناصر الجديدة
+var searchBtnTop = document.getElementById("searchBtnTop");
+var newChatBtnTop = document.getElementById("newChatBtnTop");
+var renameModal = document.getElementById("renameModal");
+var renameInput = document.getElementById("renameInput");
+var searchModal = document.getElementById("searchModal");
+var searchInputModal = document.getElementById("searchInputModal");
+
 var isChatStarted = false;
 var currentChatIndex = -1;
 var chatToDeleteIndex = -1;
+var chatToRenameIndex = -1;
 var attachedFiles = []; 
 var currentUserUID = null;
 var userChats = []; 
@@ -93,10 +101,19 @@ document.addEventListener("DOMContentLoaded", function() {
 
 function toggleSidebarFunc() {
     sidebar.classList.toggle("collapsed");
+    // إخفاء أو إظهار الشريط العلوي بناءً على حالة السايدبار
+    if (sidebar.classList.contains("collapsed")) {
+        if (isChatStarted) chatHeaderBar.classList.add("active");
+    } else {
+        chatHeaderBar.classList.remove("active");
+    }
 }
 
 toggleSidebar.addEventListener("click", toggleSidebarFunc);
-openSidebarBtn.addEventListener("click", function() { sidebar.classList.remove("collapsed"); });
+openSidebarBtn.addEventListener("click", function() { 
+    sidebar.classList.remove("collapsed"); 
+    chatHeaderBar.classList.remove("active");
+});
 
 window.logout = function() {
     signOut(auth).then(() => {
@@ -106,6 +123,33 @@ window.logout = function() {
     });
 }
 
+// البحث
+searchBtn.addEventListener("click", function() { searchModal.style.display = "flex"; searchInputModal.focus(); });
+searchBtnTop.addEventListener("click", function() { searchModal.style.display = "flex"; searchInputModal.focus(); });
+
+window.executeSearch = function() {
+    var term = searchInputModal.value.toLowerCase();
+    var messages = chatContainer.querySelectorAll(".message");
+    messages.forEach(function(msg) { 
+        if (msg.textContent.toLowerCase().includes(term)) { 
+            msg.style.display = "block"; 
+            msg.style.backgroundColor = "rgba(0, 184, 148, 0.2)";
+        } else { 
+            msg.style.display = "none"; 
+        } 
+    });
+    closeSearchModal();
+}
+
+window.closeSearchModal = function() {
+    searchModal.style.display = "none";
+    searchInputModal.value = "";
+    // إعادة تعيين الشفافية
+    var messages = chatContainer.querySelectorAll(".message");
+    messages.forEach(msg => { msg.style.display = "block"; msg.style.backgroundColor = ""; });
+}
+
+// المرفقات
 attachBtn.addEventListener("click", function(e) {
     e.stopPropagation();
     attachmentMenu.classList.toggle("active");
@@ -226,7 +270,7 @@ function renderHistory() {
         menu.className = "options-menu";
         menu.id = "menu-" + chat.id;
         menu.innerHTML = `
-            <button class="opt-btn" onclick="renameChat(event, '${chat.id}')">
+            <button class="opt-btn" onclick="openRenameModal(event, '${chat.id}')">
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="#888" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 إعادة تسمية
             </button>
@@ -286,19 +330,34 @@ window.openChat = function(chat) {
     }
 }
 
-window.renameChat = async function(e, chatId) {
+// إعادة التسمية
+window.openRenameModal = function(e, chatId) {
     e.stopPropagation();
-    var newTitle = prompt("أدخل الاسم الجديد للمحادثة:");
-    if (newTitle && newTitle.trim() !== "") {
+    chatToRenameIndex = chatId;
+    var chat = userChats.find(c => c.id === chatId);
+    if (chat) renameInput.value = chat.title;
+    renameModal.style.display = "flex";
+    renameInput.focus();
+    document.querySelectorAll(".options-menu").forEach(m => m.classList.remove("active"));
+}
+
+window.submitRename = async function() {
+    var newTitle = renameInput.value.trim();
+    if (newTitle !== "") {
         try {
-            await setDoc(doc(db, "users", currentUserUID, "chats", chatId), { title: newTitle.trim() }, { merge: true });
+            await setDoc(doc(db, "users", currentUserUID, "chats", chatToRenameIndex), { title: newTitle }, { merge: true });
             loadHistory();
-            if (currentChatIndex === chatId) {
-                headerChatTitle.textContent = newTitle.trim();
+            if (currentChatIndex === chatToRenameIndex) {
+                headerChatTitle.textContent = newTitle;
             }
         } catch (error) { console.error(error); }
     }
-    document.querySelectorAll(".options-menu").forEach(m => m.classList.remove("active"));
+    closeRenameModal();
+}
+
+window.closeRenameModal = function() {
+    renameModal.style.display = "none";
+    renameInput.value = "";
 }
 
 window.pinChat = async function(e, chatId) {
@@ -486,7 +545,6 @@ newChatBtn.addEventListener("click", function() {
     isChatStarted = false;
     currentChatIndex = -1;
     sidebar.classList.remove("collapsed"); 
-    searchContainer.classList.add("hidden");
     searchInput.value = ""; 
     problemText.value = ""; 
     problemText.style.height = "auto";
@@ -497,11 +555,8 @@ newChatBtn.addEventListener("click", function() {
     headerChatTitle.textContent = "محادثة جديدة";
 });
 
-searchBtn.addEventListener("click", function() { searchContainer.classList.toggle("hidden"); if (!searchContainer.classList.contains("hidden")) { searchInput.focus(); } });
-searchInput.addEventListener("input", function(e) {
-    var term = e.target.value.toLowerCase();
-    var messages = chatContainer.querySelectorAll(".message");
-    messages.forEach(function(msg) { if (msg.textContent.toLowerCase().includes(term)) { msg.style.display = "block"; } else { msg.style.display = "none"; } });
+newChatBtnTop.addEventListener("click", function() {
+    newChatBtn.click();
 });
 
 chatContainer.addEventListener("scroll", function() {
@@ -523,15 +578,14 @@ document.addEventListener("click", function(e) {
     }
 });
 
-window.editChatTitleFromHeader = async function() {
+window.editChatTitleFromHeader = function() {
     if (currentChatIndex !== -1) {
-        var newTitle = prompt("أدخل الاسم الجديد للمحادثة:");
-        if (newTitle && newTitle.trim() !== "") {
-            try {
-                await setDoc(doc(db, "users", currentUserUID, "chats", currentChatIndex), { title: newTitle.trim() }, { merge: true });
-                headerChatTitle.textContent = newTitle.trim();
-                loadHistory();
-            } catch (error) { console.error(error); }
+        var chat = userChats.find(c => c.id === currentChatIndex);
+        if (chat) {
+            chatToRenameIndex = currentChatIndex;
+            renameInput.value = chat.title;
+            renameModal.style.display = "flex";
+            renameInput.focus();
         }
     }
 }
