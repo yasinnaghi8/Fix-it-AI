@@ -28,13 +28,15 @@ body { background-color: var(--bg-dark); color: var(--text-main); display: flex;
 /* Main Content */
 .main-content { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; }
 
-/* الشريط العلوي */
+/* زرار السايدبار (ظاهر دايماً على الكمبيوتر) */
+.floating-sidebar-btn { position: absolute; top: 15px; right: 15px; z-index: 500; background: var(--glass-bg); border: 1px solid var(--glass-border); color: white; padding: 10px; border-radius: 10px; cursor: pointer; display: flex; }
+.floating-sidebar-btn:hover { background: rgba(255,255,255,0.1); }
+
+/* الشريط العلوي الجديد (جزء من المحتوى) */
 .chat-header-bar { 
     display: none; 
     padding: 10px 15px; 
-    position: absolute; 
-    top: 0; 
-    right: 0; 
+    position: relative; /* مش absolute عشان ميبقاش فوق المحتوى */
     width: 100%; 
     justify-content: space-between; 
     align-items: center; 
@@ -44,21 +46,8 @@ body { background-color: var(--bg-dark); color: var(--text-main); display: flex;
     gap: 10px;
 }
 .chat-header-bar.active { display: flex; }
-/* إخفاء الشريط العلوي لما السايدبار يفتح */
-.sidebar:not(.collapsed) ~ .main-content .chat-header-bar {
-    display: none !important;
-}
 
 .top-logo { width: 35px; }
-
-.top-shortcuts { 
-    display: flex; 
-    gap: 5px; 
-    background: var(--glass-bg); 
-    border: 1px solid var(--glass-border); 
-    border-radius: 10px; 
-    padding: 5px; 
-}
 
 .header-chat-title { 
     font-size: 16px; 
@@ -74,6 +63,9 @@ body { background-color: var(--bg-dark); color: var(--text-main); display: flex;
 }
 .header-chat-title:hover { color: var(--accent); }
 
+.top-actions { display: flex; gap: 5px; }
+.mobile-only { display: none; }
+
 /* Welcome */
 .welcome-logo { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; transition: all 0.5s ease; }
 .welcome-logo.started { display: none; }
@@ -84,7 +76,7 @@ body { background-color: var(--bg-dark); color: var(--text-main); display: flex;
 .welcome-text { font-size: 24px; color: #e0e0e0; text-align: center; font-weight: 700; }
 
 /* Chat */
-.chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; max-width: 900px; margin: 0 auto; width: 100%; padding-top: 70px; scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; max-width: 900px; margin: 0 auto; width: 100%; scrollbar-width: thin; scrollbar-color: transparent transparent; }
 .chat-container::-webkit-scrollbar { width: 6px; }
 .chat-container::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
 .chat-container:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
@@ -152,19 +144,19 @@ textarea { flex: 1; background: transparent; border: none; color: white; font-si
 .icon-btn { background: transparent; border: 1px solid var(--glass-border); color: white; padding: 8px; border-radius: 10px; cursor: pointer; display: flex; }
 .hidden { display: none !important; }
 
-/* Lightbox */
-.lightbox { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(25px); align-items: center; justify-content: center; }
-.lightbox.active { display: flex; }
-.lightbox img { max-width: 90%; max-height: 90%; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid var(--glass-border); }
-.close-lightbox { position: absolute; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
-.close-lightbox:hover { background: #ff4757; border-color: #ff4757; transform: scale(1.1); }
-
 /* Modals */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; justify-content: center; align-items: center; }
 .modal-content { background: #1e1e1e; padding: 20px; border-radius: 15px; text-align: center; border: 1px solid var(--glass-border); color: white; width: 90%; max-width: 400px; }
 .btn-danger { background: #ff4757; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-family: 'Cairo'; }
 .btn-primary { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-family: 'Cairo'; }
 .btn-cancel { background: transparent; color: white; border: 1px solid var(--glass-border); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-family: 'Cairo'; }
+
+/* Lightbox */
+.lightbox { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(25px); align-items: center; justify-content: center; }
+.lightbox.active { display: flex; }
+.lightbox img { max-width: 90%; max-height: 90%; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid var(--glass-border); }
+.close-lightbox { position: absolute; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+.close-lightbox:hover { background: #ff4757; border-color: #ff4757; transform: scale(1.1); }
 
 /* Mobile */
 @media (max-width: 768px) {
@@ -178,4 +170,11 @@ textarea { flex: 1; background: transparent; border: none; color: white; font-si
     
     .chat-container { padding: 10px; }
     .message { font-size: 15px; }
+    
+    /* إخفاء اللوجو في الموبايل وإظهار زرار السايدبار */
+    .top-logo { display: none; }
+    .mobile-only { display: flex; }
+    
+    /* إخفاء زرار السايدبار العايم في الموبايل */
+    .floating-sidebar-btn { display: none; }
 }
