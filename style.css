@@ -28,15 +28,15 @@ body { background-color: var(--bg-dark); color: var(--text-main); display: flex;
 /* Main Content */
 .main-content { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; }
 
-/* زرار السايدبار (ظاهر دايماً على الكمبيوتر) */
-.floating-sidebar-btn { position: absolute; top: 15px; right: 15px; z-index: 500; background: var(--glass-bg); border: 1px solid var(--glass-border); color: white; padding: 10px; border-radius: 10px; cursor: pointer; display: flex; }
-.floating-sidebar-btn:hover { background: rgba(255,255,255,0.1); }
+/* زرار السايدبار العايم */
+.floating-sidebar-btn { position: absolute; top: 15px; right: 15px; z-index: 500; background: var(--glass-bg); border: 1px solid var(--glass-border); color: white; padding: 10px; border-radius: 10px; cursor: pointer; display: none; }
+.floating-sidebar-btn.active { display: flex; }
 
-/* الشريط العلوي الجديد (جزء من المحتوى) */
+/* الشريط العلوي */
 .chat-header-bar { 
     display: none; 
     padding: 10px 15px; 
-    position: relative; /* مش absolute عشان ميبقاش فوق المحتوى */
+    position: relative;
     width: 100%; 
     justify-content: space-between; 
     align-items: center; 
@@ -64,7 +64,6 @@ body { background-color: var(--bg-dark); color: var(--text-main); display: flex;
 .header-chat-title:hover { color: var(--accent); }
 
 .top-actions { display: flex; gap: 5px; }
-.mobile-only { display: none; }
 
 /* Welcome */
 .welcome-logo { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; transition: all 0.5s ease; }
@@ -171,10 +170,7 @@ textarea { flex: 1; background: transparent; border: none; color: white; font-si
     .chat-container { padding: 10px; }
     .message { font-size: 15px; }
     
-    /* إخفاء اللوجو في الموبايل وإظهار زرار السايدبار */
     .top-logo { display: none; }
-    .mobile-only { display: flex; }
     
-    /* إخفاء زرار السايدبار العايم في الموبايل */
     .floating-sidebar-btn { display: none; }
 }
