@@ -51,7 +51,6 @@ var sidebar = document.getElementById("sidebar");
 var toggleSidebar = document.getElementById("toggleSidebar");
 var searchBtn = document.getElementById("searchBtn");
 var newChatBtn = document.getElementById("newChatBtn");
-var searchInput = document.getElementById("searchInput");
 var btnDiagnose = document.getElementById("btnDiagnose");
 var problemText = document.getElementById("problemText");
 var attachBtn = document.getElementById("attachBtn");
@@ -65,7 +64,6 @@ var chatHeaderBar = document.getElementById("chatHeaderBar");
 var scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
 var headerChatTitle = document.getElementById("headerChatTitle");
 
-// العناصر الجديدة
 var searchBtnTop = document.getElementById("searchBtnTop");
 var newChatBtnTop = document.getElementById("newChatBtnTop");
 var renameModal = document.getElementById("renameModal");
@@ -91,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (window.innerWidth < 768) {
                 sidebar.classList.add("collapsed");
             }
-
+            updateSidebarBtnState();
             loadHistory();
         } else {
             window.location.href = "auth.html";
@@ -99,20 +97,23 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
+function updateSidebarBtnState() {
+    if (sidebar.classList.contains("collapsed")) {
+        openSidebarBtn.classList.add("active");
+    } else {
+        openSidebarBtn.classList.remove("active");
+    }
+}
+
 function toggleSidebarFunc() {
     sidebar.classList.toggle("collapsed");
-    // إخفاء أو إظهار الشريط العلوي بناءً على حالة السايدبار
-    if (sidebar.classList.contains("collapsed")) {
-        if (isChatStarted) chatHeaderBar.classList.add("active");
-    } else {
-        chatHeaderBar.classList.remove("active");
-    }
+    updateSidebarBtnState();
 }
 
 toggleSidebar.addEventListener("click", toggleSidebarFunc);
 openSidebarBtn.addEventListener("click", function() { 
     sidebar.classList.remove("collapsed"); 
-    chatHeaderBar.classList.remove("active");
+    updateSidebarBtnState();
 });
 
 window.logout = function() {
@@ -144,7 +145,6 @@ window.executeSearch = function() {
 window.closeSearchModal = function() {
     searchModal.style.display = "none";
     searchInputModal.value = "";
-    // إعادة تعيين الشفافية
     var messages = chatContainer.querySelectorAll(".message");
     messages.forEach(msg => { msg.style.display = "block"; msg.style.backgroundColor = ""; });
 }
@@ -328,9 +328,9 @@ window.openChat = function(chat) {
     if (window.innerWidth < 768) {
         sidebar.classList.add("collapsed");
     }
+    updateSidebarBtnState();
 }
 
-// إعادة التسمية
 window.openRenameModal = function(e, chatId) {
     e.stopPropagation();
     chatToRenameIndex = chatId;
@@ -545,7 +545,6 @@ newChatBtn.addEventListener("click", function() {
     isChatStarted = false;
     currentChatIndex = -1;
     sidebar.classList.remove("collapsed"); 
-    searchInput.value = ""; 
     problemText.value = ""; 
     problemText.style.height = "auto";
     previewContainer.innerHTML = "";
@@ -553,6 +552,7 @@ newChatBtn.addEventListener("click", function() {
     chatHeaderBar.classList.remove("active");
     topLogo.style.display = "none";
     headerChatTitle.textContent = "محادثة جديدة";
+    updateSidebarBtnState();
 });
 
 newChatBtnTop.addEventListener("click", function() {
