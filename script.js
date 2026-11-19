@@ -66,10 +66,6 @@ var headerChatTitle = document.getElementById("headerChatTitle");
 
 var searchBtnTop = document.getElementById("searchBtnTop");
 var newChatBtnTop = document.getElementById("newChatBtnTop");
-var mobileSidebarBtn = document.getElementById("mobileSidebarBtn");
-var searchBtnMobile = document.getElementById("searchBtnMobile");
-var newChatBtnMobile = document.getElementById("newChatBtnMobile");
-
 var renameModal = document.getElementById("renameModal");
 var renameInput = document.getElementById("renameInput");
 var searchModal = document.getElementById("searchModal");
@@ -120,10 +116,6 @@ openSidebarBtn.addEventListener("click", function() {
     updateSidebarBtnState();
 });
 
-mobileSidebarBtn.addEventListener("click", function() {
-    sidebar.classList.remove("collapsed");
-});
-
 window.logout = function() {
     signOut(auth).then(() => {
         localStorage.removeItem("userName");
@@ -135,7 +127,6 @@ window.logout = function() {
 // البحث
 searchBtn.addEventListener("click", function() { searchModal.style.display = "flex"; searchInputModal.focus(); });
 searchBtnTop.addEventListener("click", function() { searchModal.style.display = "flex"; searchInputModal.focus(); });
-searchBtnMobile.addEventListener("click", function() { searchModal.style.display = "flex"; searchInputModal.focus(); });
 
 window.executeSearch = function() {
     var term = searchInputModal.value.toLowerCase();
@@ -300,7 +291,7 @@ function renderHistory() {
             <div class="chat-item-date">${chat.date}</div>
             <div class="chat-item-title">${chat.title}</div>
         `;
-        content.onclick = function() { openChat(chat); };
+        content.onclick = function() { window.openChat(chat); };
 
         div.appendChild(optBtn);
         div.appendChild(content);
@@ -565,10 +556,6 @@ newChatBtn.addEventListener("click", function() {
 });
 
 newChatBtnTop.addEventListener("click", function() {
-    newChatBtn.click();
-});
-
-newChatBtnMobile.addEventListener("click", function() {
     newChatBtn.click();
 });
 
