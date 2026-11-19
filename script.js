@@ -58,9 +58,7 @@ var attachmentMenu = document.getElementById("attachmentMenu");
 var previewContainer = document.getElementById("previewContainer");
 var imageLightbox = document.getElementById("imageLightbox");
 var lightboxImg = document.getElementById("lightboxImg");
-var openSidebarBtn = document.getElementById("openSidebarBtn");
-var topLogo = document.getElementById("topLogo");
-var chatHeaderBar = document.getElementById("chatHeaderBar");
+var sidebarBtnTop = document.getElementById("sidebarBtnTop");
 var scrollToBottomBtn = document.getElementById("scrollToBottomBtn");
 var headerChatTitle = document.getElementById("headerChatTitle");
 
@@ -70,6 +68,11 @@ var renameModal = document.getElementById("renameModal");
 var renameInput = document.getElementById("renameInput");
 var searchModal = document.getElementById("searchModal");
 var searchInputModal = document.getElementById("searchInputModal");
+var searchResultMsg = document.getElementById("searchResultMsg");
+var searchBanner = document.getElementById("searchBanner");
+var searchBannerText = document.getElementById("searchBannerText");
+var deleteModal = document.getElementById("deleteModal");
+var deleteChatName = document.getElementById("deleteChatName");
 
 var isChatStarted = false;
 var currentChatIndex = -1;
@@ -79,17 +82,35 @@ var attachedFiles = [];
 var currentUserUID = null;
 var userChats = []; 
 
+// حالة الواجهة: كلاسات على body بتتحكم في الشريط العلوي من الـ CSS
+var mobileMQ = window.matchMedia("(max-width: 768px)");
+
+function syncLayoutState() {
+    document.body.classList.toggle("sidebar-closed", sidebar.classList.contains("collapsed"));
+    document.body.classList.toggle("chat-started", isChatStarted);
+}
+
+function setSidebarCollapsed(collapsed) {
+    sidebar.classList.toggle("collapsed", collapsed);
+    syncLayoutState();
+}
+
+function setChatStarted(started) {
+    isChatStarted = started;
+    welcomeLogo.classList.toggle("started", started);
+    syncLayoutState();
+}
+
+// على الموبايل السايدبار بيبدأ مقفول
+if (mobileMQ.matches) { sidebar.classList.add("collapsed"); }
+syncLayoutState();
+
 document.addEventListener("DOMContentLoaded", function() {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUserUID = user.uid;
             document.getElementById("sidebarUserName").textContent = user.displayName || "مستخدم";
             if (user.photoURL) document.getElementById("userAvatar").src = user.photoURL;
-            
-            if (window.innerWidth < 768) {
-                sidebar.classList.add("collapsed");
-            }
-            updateSidebarBtnState();
             loadHistory();
         } else {
             window.location.href = "auth.html";
@@ -97,23 +118,11 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
-function updateSidebarBtnState() {
-    if (sidebar.classList.contains("collapsed")) {
-        openSidebarBtn.classList.add("active");
-    } else {
-        openSidebarBtn.classList.remove("active");
-    }
-}
-
-function toggleSidebarFunc() {
-    sidebar.classList.toggle("collapsed");
-    updateSidebarBtnState();
-}
-
-toggleSidebar.addEventListener("click", toggleSidebarFunc);
-openSidebarBtn.addEventListener("click", function() { 
-    sidebar.classList.remove("collapsed"); 
-    updateSidebarBtnState();
+toggleSidebar.addEventListener("click", function() {
+    setSidebarCollapsed(!sidebar.classList.contains("collapsed"));
+});
+sidebarBtnTop.addEventListener("click", function() {
+    setSidebarCollapsed(false);
 });
 
 window.logout = function() {
@@ -124,29 +133,60 @@ window.logout = function() {
     });
 }
 
-// البحث
-searchBtn.addEventListener("click", function() { searchModal.style.display = "flex"; searchInputModal.focus(); });
-searchBtnTop.addEventListener("click", function() { searchModal.style.display = "flex"; searchInputModal.focus(); });
+// البحث في المحادثة
+function openSearchModal() {
+    if (mobileMQ.matches) { setSidebarCollapsed(true); }
+    searchResultMsg.textContent = "";
+    searchModal.style.display = "flex";
+    searchInputModal.focus();
+}
+searchBtn.addEventListener("click", openSearchModal);
+searchBtnTop.addEventListener("click", openSearchModal);
+
+function clearSearch() {
+    chatContainer.querySelectorAll(".message").forEach(function(msg) {
+        msg.classList.remove("search-hit", "search-hidden");
+    });
+    searchBanner.classList.add("hidden");
+}
+window.clearSearch = clearSearch;
 
 window.executeSearch = function() {
-    var term = searchInputModal.value.toLowerCase();
+    var term = searchInputModal.value.trim();
+    if (!term) { searchResultMsg.textContent = "اكتب كلمة للبحث"; return; }
+
     var messages = chatContainer.querySelectorAll(".message");
-    messages.forEach(function(msg) { 
-        if (msg.textContent.toLowerCase().includes(term)) { 
-            msg.style.display = "block"; 
-            msg.style.backgroundColor = "rgba(0, 184, 148, 0.2)";
-        } else { 
-            msg.style.display = "none"; 
-        } 
+    if (messages.length === 0) { searchResultMsg.textContent = "ابدأ محادثة الأول وبعدين ابحث فيها"; return; }
+
+    var lowered = term.toLowerCase();
+    var hits = [];
+    messages.forEach(function(msg) {
+        if (msg.textContent.toLowerCase().includes(lowered)) {
+            msg.classList.remove("search-hidden");
+            msg.classList.add("search-hit");
+            hits.push(msg);
+        } else {
+            msg.classList.remove("search-hit");
+            msg.classList.add("search-hidden");
+        }
     });
+
+    if (hits.length === 0) {
+        clearSearch();
+        searchResultMsg.textContent = "مفيش نتايج للكلمة دي";
+        return;
+    }
+
+    searchBannerText.textContent = "نتائج البحث عن «" + term + "»: " + hits.length;
+    searchBanner.classList.remove("hidden");
     closeSearchModal();
+    hits[0].scrollIntoView({ block: "center" });
 }
 
 window.closeSearchModal = function() {
     searchModal.style.display = "none";
     searchInputModal.value = "";
-    var messages = chatContainer.querySelectorAll(".message");
-    messages.forEach(msg => { msg.style.display = "block"; msg.style.backgroundColor = ""; });
+    searchResultMsg.textContent = "";
 }
 
 // المرفقات
@@ -310,6 +350,7 @@ function toggleMenu(e, chatId) {
 }
 
 window.openChat = function(chat) {
+    clearSearch();
     chatContainer.innerHTML = chat.content;
     var aiMsgs = chatContainer.querySelectorAll('.ai-msg');
     aiMsgs.forEach(msg => {
@@ -318,17 +359,13 @@ window.openChat = function(chat) {
         }
     });
 
-    welcomeLogo.classList.add("started");
-    isChatStarted = true;
+    setChatStarted(true);
     currentChatIndex = chat.id;
-    chatHeaderBar.classList.add("active");
-    topLogo.style.display = "block";
     headerChatTitle.textContent = chat.title;
 
-    if (window.innerWidth < 768) {
-        sidebar.classList.add("collapsed");
+    if (mobileMQ.matches) {
+        setSidebarCollapsed(true);
     }
-    updateSidebarBtnState();
 }
 
 window.openRenameModal = function(e, chatId) {
@@ -338,6 +375,7 @@ window.openRenameModal = function(e, chatId) {
     if (chat) renameInput.value = chat.title;
     renameModal.style.display = "flex";
     renameInput.focus();
+    renameInput.select();
     document.querySelectorAll(".options-menu").forEach(m => m.classList.remove("active"));
 }
 
@@ -375,7 +413,10 @@ window.pinChat = async function(e, chatId) {
 window.askDelete = function(e, chatId) {
     e.stopPropagation();
     chatToDeleteIndex = chatId;
-    document.getElementById("deleteModal").style.display = "flex";
+    var chat = userChats.find(c => c.id === chatId);
+    deleteChatName.textContent = chat ? chat.title : "";
+    deleteModal.style.display = "flex";
+    document.querySelectorAll(".options-menu").forEach(m => m.classList.remove("active"));
 }
 
 window.closeModal = function() {
@@ -391,17 +432,12 @@ window.confirmDelete = async function() {
     }
     closeModal();
     if (currentChatIndex === chatToDeleteIndex) {
-        newChatBtn.click();
+        startNewChat();
     }
 }
 
 function addMessage(text, type, imageSrc = null) {
-    if (!isChatStarted) { 
-        welcomeLogo.classList.add("started"); 
-        isChatStarted = true; 
-        chatHeaderBar.classList.add("active");
-        topLogo.style.display = "block";
-    }
+    if (!isChatStarted) { setChatStarted(true); }
     var msgDiv = document.createElement("div");
     msgDiv.classList.add("message", type === "user" ? "user-msg" : "ai-msg");
     
@@ -482,6 +518,7 @@ btnDiagnose.addEventListener("click", async function() {
         finalMessage = "شوف الصورة دي وقولي المشكلة إيه؟";
     }
 
+    clearSearch();
     addMessage(finalMessage, "user", imageDataUrl); 
     problemText.value = ""; 
     problemText.style.height = "auto";
@@ -539,25 +576,21 @@ btnDiagnose.addEventListener("click", async function() {
 problemText.addEventListener("input", function() { this.style.height = "auto"; this.style.height = (this.scrollHeight) + "px"; });
 problemText.addEventListener("keydown", function(e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); btnDiagnose.click(); } });
 
-newChatBtn.addEventListener("click", function() {
-    chatContainer.innerHTML = ""; 
-    welcomeLogo.classList.remove("started"); 
-    isChatStarted = false;
+function startNewChat() {
+    clearSearch();
+    chatContainer.innerHTML = "";
+    setChatStarted(false);
     currentChatIndex = -1;
-    sidebar.classList.remove("collapsed"); 
-    problemText.value = ""; 
+    problemText.value = "";
     problemText.style.height = "auto";
     previewContainer.innerHTML = "";
     attachedFiles = [];
-    chatHeaderBar.classList.remove("active");
-    topLogo.style.display = "none";
     headerChatTitle.textContent = "محادثة جديدة";
-    updateSidebarBtnState();
-});
+    if (mobileMQ.matches) { setSidebarCollapsed(true); }
+}
 
-newChatBtnTop.addEventListener("click", function() {
-    newChatBtn.click();
-});
+newChatBtn.addEventListener("click", startNewChat);
+newChatBtnTop.addEventListener("click", startNewChat);
 
 chatContainer.addEventListener("scroll", function() {
     var isAtBottom = chatContainer.scrollHeight - chatContainer.clientHeight <= chatContainer.scrollTop + 50;
@@ -586,6 +619,25 @@ window.editChatTitleFromHeader = function() {
             renameInput.value = chat.title;
             renameModal.style.display = "flex";
             renameInput.focus();
+            renameInput.select();
         }
     }
 }
+
+// النوافذ: Enter للتأكيد، Esc للإغلاق، والضغط برّه النافذة بيقفلها
+renameInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { e.preventDefault(); submitRename(); }
+});
+searchInputModal.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") { e.preventDefault(); executeSearch(); }
+});
+document.addEventListener("keydown", function(e) {
+    if (e.key !== "Escape") return;
+    closeRenameModal();
+    closeSearchModal();
+    closeModal();
+    closeLightbox();
+});
+[[renameModal, closeRenameModal], [searchModal, closeSearchModal], [deleteModal, closeModal]].forEach(function(pair) {
+    pair[0].addEventListener("click", function(e) { if (e.target === pair[0]) pair[1](); });
+});
