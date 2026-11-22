@@ -82,7 +82,7 @@ var attachedFiles = [];
 var currentUserUID = null;
 var userChats = []; 
 
-// حالة الواجهة: كلاسات على body بتتحكم في الشريط العلوي من الـ CSS
+
 var mobileMQ = window.matchMedia("(max-width: 768px)");
 
 function syncLayoutState() {
@@ -101,7 +101,7 @@ function setChatStarted(started) {
     syncLayoutState();
 }
 
-// على الموبايل السايدبار بيبدأ مقفول
+
 if (mobileMQ.matches) { sidebar.classList.add("collapsed"); }
 syncLayoutState();
 
@@ -133,7 +133,7 @@ window.logout = function() {
     });
 }
 
-// البحث في المحادثة
+
 function openSearchModal() {
     if (mobileMQ.matches) { setSidebarCollapsed(true); }
     searchResultMsg.textContent = "";
@@ -189,7 +189,7 @@ window.closeSearchModal = function() {
     searchResultMsg.textContent = "";
 }
 
-// المرفقات
+
 attachBtn.addEventListener("click", function(e) {
     e.stopPropagation();
     attachmentMenu.classList.toggle("active");
@@ -624,7 +624,7 @@ window.editChatTitleFromHeader = function() {
     }
 }
 
-// النوافذ: Enter للتأكيد، Esc للإغلاق، والضغط برّه النافذة بيقفلها
+
 renameInput.addEventListener("keydown", function(e) {
     if (e.key === "Enter") { e.preventDefault(); submitRename(); }
 });
