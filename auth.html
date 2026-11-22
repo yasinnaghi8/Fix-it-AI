@@ -92,7 +92,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        // استيراد قاعدة البيانات
+ 
         import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -107,7 +107,7 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app); // تفعيل قاعدة البيانات
+        const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
         window.toggleForms = function() {
@@ -120,7 +120,7 @@
         window.signInWithGoogle = function() {
             signInWithPopup(auth, provider).then((result) => {
                 localStorage.setItem("userName", result.user.displayName || "مستخدم");
-                localStorage.setItem("userUID", result.user.uid); // بنحفظ الـ ID بتاع المستخدم
+                localStorage.setItem("userUID", result.user.uid);
                 if (result.user.photoURL) {
                     localStorage.setItem("userAvatar", result.user.photoURL);
                 } else {
@@ -165,7 +165,7 @@
             createUserWithEmailAndPassword(auth, email, password).then((userCredential) => {
                 updateProfile(userCredential.user, { displayName: name }).then(() => {
                     localStorage.setItem("userName", name);
-                    localStorage.setItem("userUID", userCredential.user.uid); // بنحفظ الـ ID
+                    localStorage.setItem("userUID", userCredential.user.uid);
                     window.location.href = "index.html";
                 });
             }).catch((error) => {
@@ -180,7 +180,7 @@
 
             signInWithEmailAndPassword(auth, email, password).then((userCredential) => {
                 localStorage.setItem("userName", userCredential.user.displayName || "مستخدم");
-                localStorage.setItem("userUID", userCredential.user.uid); // بنحفظ الـ ID
+                localStorage.setItem("userUID", userCredential.user.uid);
                 window.location.href = "index.html";
             }).catch((error) => {
                 document.getElementById("loginError").style.display = "block";
